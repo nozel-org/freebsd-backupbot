@@ -1,5 +1,5 @@
 # Backupbot
-Backupbot is a serverbot spin-off. The functionality first was planned for serverbot, but later we decided it would be better to seperate main use-cases (e.g. 'monitoring' and 'backup') in seperate projects.
+Backupbot is a serverbot spin-off. The functionality first was planned for serverbot, but later we decided it would be better to separate main use-cases (e.g. 'monitoring' and 'backup') in seperate projects.
 
 # Planned features
 * Easy to understand and simplistic.
