@@ -1,10 +1,10 @@
 #!/bin/sh
 
-#############################################################################
-# Version 0.1.0-UNSTABLE (29-06-2020)
-#############################################################################
+################################################################################
+# Version 0.1.0-UNSTABLE (30-06-2020)
+################################################################################
 
-#############################################################################
+################################################################################
 # Copyright 2019-2020 Nozel/Sebas Veeke. Licenced under a Creative Commons
 # Attribution-NonCommercial-ShareAlike 4.0 International License.
 #
@@ -13,11 +13,11 @@
 # Contact:
 # > e-mail      mail@nozel.org
 # > GitHub      onnozel
-#############################################################################
+################################################################################
 
-#############################################################################
+################################################################################
 # VARIABLES
-#############################################################################
+################################################################################
 
 # serverbot version
 BACKUPBOT_VERSION='0.1.0'
@@ -43,20 +43,19 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
 
     # and finally use default values for unconfigured parameters
     if [ "${BACKUP_FILES_PREFIX}" = '0' ]; then
-        BACKUP_FILES_PREFIX="$(date +%Y%m%d)-files"
+        BACKUP_FILES_PREFIX="$(date +%y%m%dT%H%M)"
     fi
     if [ "${BACKUP_MYSQL_PREFIX}" = '0' ]; then
-        BACKUP_MYSQL_PREFIX="$(date +%Y%m%d)"
+        BACKUP_MYSQL_PREFIX="$(date +%y%m%dT%H%M)"
     fi
-    XZ_COMPRESSION_RATE='-1'
 else
     # if backupbot.conf does not exist, return this error 
     echo 'backupbot: error: /usr/local/etc/backupbot.conf is required but cannot be found'
 fi
 
-#############################################################################
+################################################################################
 # ARGUMENTS
-#############################################################################
+################################################################################
 
 # enable arguments to backupbot
 while test -n "$1"; do
@@ -101,14 +100,27 @@ while test -n "$1"; do
     esac
 done
 
-#############################################################################
+################################################################################
 # ERROR FUNCTIONS
-#############################################################################
+################################################################################
 
+# requirement errors
 error_invalid_argument() {
     echo 'backupbot: error: used argument is invalid, use "backuptbot --help" for proper usage'
     exit 1
 }    
+
+error_no_root_privileges() {
+    echo 'backupbot: error: used argument must be run with root privileges'
+    exit 1
+}
+
+error_os_not_supported() {
+    echo 'sparry: operating system is not supported.'
+    exit 1
+}
+
+# configuration errors
 error_destination_not_configured() {
     echo 'backupbot: error: backup destination is not configured properly in /usr/local/etc/backupbot.conf'
     exit 1
@@ -139,9 +151,9 @@ error_feature_not_configured() {
     exit 1
 }
 
-#############################################################################
+################################################################################
 # REQUIREMENT FUNCTIONS
-#############################################################################
+################################################################################
 
 requirement_argument_validity() {
     # enabled backup features must have file destinations
@@ -173,20 +185,26 @@ requirement_argument_validity() {
 }
 
 requirement_root() {
-    echo 'placeholder requirement root'
+    # show error when backupbot isn't run with root privileges
+    if [ "$(id -u)" -ne '0' ]; then
+        error_no_root_privileges
+    fi
 }
 
 requirement_os() {
-    echo 'placeholder requirement os'
+    # show error when freebsd-version cannot be found
+    if [ ! "$(command -v freebsd-version)" ]; then
+        error_os_not_supported
+    fi
 }
 
-#############################################################################
+################################################################################
 # OPTION FUNCTIONS
-#############################################################################
+################################################################################
 
 option_version() {
     echo "Backupbot ${BACKUPBOT_VERSION}"
-    echo "Copyright (C) 2016-2020 Nozel."
+    echo "Copyright (C) 2019-2020 Nozel."
     echo "License CC Attribution-NonCommercial-ShareAlike 4.0 Int."
     echo
     echo "Written by Sebas Veeke"
@@ -208,7 +226,7 @@ option_help() {
 }
 
 option_cron() {
-    echo 'Removing old backupbot cronjobs'
+    echo 'Removing old backupbot cronjob'
     rm -f /etc/cron.d/backupbot
     if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ]; then
         echo 'Updating cronjob for backupbot'
@@ -220,36 +238,35 @@ option_cron() {
     echo 'Done!'
 }
 
-#############################################################################
+################################################################################
 # FEATURE FUNCTIONS
-#############################################################################
+################################################################################
 
 feature_files() {
+    # backupbot uses tar for archiving data and xz for compressing data
     if [ "${BACKUP_FILES_ENABLE}" = 'YES' ]; then
-        # backupbot uses tar for archiving data and xz for compressing data
-        # the below xz compression rate is less hard hitting on slower systems
-        XZ_OPT=${XZ_COMPRESSION_RATE}
-        # the following arguments are used for tar:
+        # the following settings are used for tar:
         # --create               (-c) create new archive containing the specified items
         # --xz                   (-J) compress the resulting archive with xz
         # --preserve-permissions (-p) preserve file permissions
         # --file                 (-f) write the archive to the specified file
         # --verbose              (-v) produce verbose output (disabled by default)
-        tar --create --preserve-permissions --xz --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}.tar.xz" ${BACKUP_FILES}
+        tar --create --preserve-permissions --xz --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-files.tar.xz" ${BACKUP_FILES}
     fi
 }
 
 feature_mysql() {
+    # create a list of all user created mysql databases and mysqldump them to their own compressed (xz) file
     if [ "${BACKUP_MYSQL_ENABLE}" = 'YES' ]; then
-        for DB in $(mysql -e 'show databases' -s --skip-column-names); do
-            mysqldump --single-transaction ${DB} | xz ${XZ_COMPRESSION_RATE} > ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${DB}.sql.xz
+        for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
+            mysqldump --single-transaction ${DB} | xz > ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${DB}.sql.xz
         done
     fi
 }
 
-#############################################################################
+################################################################################
 # MAIN FUNCTION
-#############################################################################
+################################################################################
 
 backupbot_main() {
     # check whether requirements are met
