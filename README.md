@@ -4,27 +4,26 @@ Backupbot is a easy to use tool for creating (automated) backups on FreeBSD. Cur
 ## Features
 * **Easy to use**: get started in just a couple of minutes.
 * **Backup files and mysql databases**: based on your preferences.
-* **Configurable settings**: customize your backups and schedule. 
-* **Made for FreeBSD** and is fully compatible with basic shell.
+* **Configurable settings**: customize your backups and schedule.
+* **Made for FreeBSD** and fully compatible with basic shell.
 
 ## How to use
-Quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. The `--backup` argument makes sure all enabled backup features in `backupbot.conf` will be activated. If instead only one of the enabled backup features should be activated, just use the corresponding argument like `backupbot --files` of `backupbot --mysql`. To effectuate the chosen schedule when automatic backup is enabled, use `backupbot --cron`.
+Quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. The `--backup` argument makes sure all enabled backup features in `backupbot.conf` will be activated. If instead only one of the enabled backup features should be activated, just use the corresponding argument like `backupbot --files` of `backupbot --mysql`. To effectuate the chosen schedule for automatic backup, use `backupbot --cron`.
 
 If both `mysql` and `files` features have been enabled, the output of the backup will look something like this:
 ```
 root@server:~ # ls -all -h /data/backup/
 drwxr-xr-x  2 root  wheel   512B Jul  1 15:36 .
 drwxr-xr-x  4 root  wheel   1.0K Jun 29 23:52 ..
--rw-r--r--  1 root  wheel   162K Jul  1 03:09 200701T0300-casusdag.sql.xz
--rw-r--r--  1 root  wheel   896M Jul  1 03:09 200701T0300-files.tar.xz
--rw-r--r--  1 root  wheel    66K Jul  1 03:09 200701T0300-cloud_test.sql.xz
--rw-r--r--  1 root  wheel    16M Jul  1 03:11 200701T0300-wp.sql.xz
+-rw-r--r--  1 root  wheel   162K Jul  1 03:00 200701T0300-casusdag.sql.xz
+-rw-r--r--  1 root  wheel   896M Jul  1 03:00 200701T0300-files.tar.xz
+-rw-r--r--  1 root  wheel    66K Jul  1 03:00 200701T0300-cloud_test.sql.xz
+-rw-r--r--  1 root  wheel    16M Jul  1 03:00 200701T0300-wp.sql.xz
 ```
 
 ## How to install
 1. Copy `backupbot` to `/usr/bin/backupbot` (owner=`root`, group=`wheel`, permissions=`555` (read & execute).
 2. Copy `backupbot.conf` to `/usr/local/etc/backupbot.conf` and adjust the settings to taste.
-3. Run `serverbot --backup` to start the automated backups based on your settings.
 
 This will look something like:
 ```
@@ -32,7 +31,6 @@ This will look something like:
 wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.sh -O /usr/bin/backupbot
 chown root:wheel /usr/bin/backupbot
 chmod 555 /usr/bin/backupbot
-# install backupbot.conf
 wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.conf -O /usr/local/etc/backupbot.conf
 ```
 
@@ -40,6 +38,9 @@ wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backup
 If you have questions/suggestions about Backupbot or find bugs, please let us know via the issue tracker.
 
 ## Changelog
+### 1.1.0-STABLE (19-01-2021)
+- Added support for symmetrical encryption of backups
+
 ### 1.0.0-STABLE (01-07-2020)
 - First stable release.
 - Added support for backing up files.
