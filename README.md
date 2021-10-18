@@ -1,5 +1,5 @@
-# Backupbot
-Backupbot is a easy to use tool for creating (automated) backups on FreeBSD. Currently files and mysql databases are supported by backupbot, but more features can be added in the future.
+# backupbot
+`backupbot` is a easy to use tool for creating (automated) backups on FreeBSD. Currently files and mysql databases are supported, but more features can be added in the future.
 
 ## Features
 * **Easy to use**: get started in just a couple of minutes.
@@ -8,7 +8,7 @@ Backupbot is a easy to use tool for creating (automated) backups on FreeBSD. Cur
 * **Made for FreeBSD**: compatible with basic shell.
 
 ## How to use
-It's quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. The `--backup` argument makes sure all enabled backup features in `backupbot.conf` will be activated. If instead only one of the enabled backup features should be activated manually, just use the corresponding argument like `backupbot --files` of `backupbot --mysql`. To effectuate the chosen schedule for automatic backup, use `backupbot --cron` and `backupbot` will take care of it.
+It's quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. The `--backup` argument makes sure all enabled backup features in `backupbot.conf` will be activated. If instead only one of the enabled backup features should be activated manually, just use the corresponding argument like `backupbot --files` or `backupbot --mysql`. To effectuate the chosen schedule for automatic backup, use `backupbot --cron` and `backupbot` will take care of it.
 
 If both `mysql` and `files` features have been enabled, the output of the backup will look something like this:
 ```
@@ -33,10 +33,11 @@ wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backup
 chown root:wheel /usr/bin/backupbot
 chmod 555 /usr/bin/backupbot
 wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.conf -O /usr/local/etc/backupbot.conf
+backupbot --cron
 ```
 
 ## Support
-If you have questions/suggestions about `backupbot` or find bugs, please let us know via the issue tracker.
+If you have questions, suggestion or find bugs, please let us know via the issue tracker.
 
 ## Changelog
 ### 1.2.0-STABLE (16-10-2021)
