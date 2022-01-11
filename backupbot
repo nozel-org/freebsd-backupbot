@@ -1,11 +1,11 @@
 #!/bin/sh
 
 ################################################################################
-# Version 1.2.0-STABLE (16-10-2021)
+# Version 1.2.1-STABLE (11-01-2022)
 ################################################################################
 
 ################################################################################
-# Copyright 2019-2021 Nozel/Sebas Veeke. Licenced under a Creative Commons
+# Copyright 2019-2022 Nozel/Sebas Veeke. Licenced under a Creative Commons
 # Attribution-NonCommercial-ShareAlike 4.0 International License.
 #
 # See https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -20,7 +20,7 @@
 ################################################################################
 
 # serverbot version
-BACKUPBOT_VERSION='1.2.0'
+BACKUPBOT_VERSION='1.2.1'
 
 # backupbot parameters can be configured in /usr/local/etc/backupbot.conf
 # if the backupbot configuration file exists, it gets sourced by backupbot
@@ -213,7 +213,7 @@ requirement_os() {
 
 option_version() {
     echo "Backupbot ${BACKUPBOT_VERSION}"
-    echo "Copyright (C) 2019-2021 Nozel."
+    echo "Copyright (C) 2019-2022 Nozel."
     echo "License CC Attribution-NonCommercial-ShareAlike 4.0 Int."
     echo
     echo "Written by Sebas Veeke"
@@ -270,10 +270,6 @@ feature_files() {
                 # --passphrase                use password provided in backupbot.conf
                 # --output               (-o) write output to file
                 tar --create --preserve-permissions --xz --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-files.tar.xz.gpg"
-                # delete backups older than file retention, unless it's zero (infinite)
-                if [ "${BACKUP_FILES_RETENTION}" -gt '0' ]; then
-                    find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*.tar.xz.gpg' -delete
-                fi
             else
                 error_gpg_not_installed
             fi
@@ -285,10 +281,11 @@ feature_files() {
             # --file                 (-f) write the archive to the specified file
             # --verbose              (-v) produce verbose output (disabled by default)
             tar --create --preserve-permissions --xz --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-files.tar.xz" ${BACKUP_FILES}
-            # delete backups older than file retention, unless it's zero (infinite)
-            if [ "${BACKUP_FILES_RETENTION}" -gt '0' ]; then
-                find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*.tar.xz' -delete
-            fi
+        fi
+        # delete backups older than file retention, unless it's zero (infinite)
+        if [ "${BACKUP_FILES_RETENTION}" -gt '0' ]; then
+            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*.tar.xz' -delete
+            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*.tar.xz.gpg' -delete
         fi
     fi
 }
@@ -303,10 +300,6 @@ feature_mysql() {
                 for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
                     mysqldump --single-transaction "${DB}" | xz | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${DB}.sql.xz.gpg"
                 done
-                # delete backups older than mysql retention, unless it's zero (infinite)
-                if [ "${BACKUP_MYSQL_RETENTION}" -gt '0' ]; then
-                    find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*.tar.xz.gpg' -delete
-                fi
             else
                 error_gpg_not_installed
             fi
@@ -315,10 +308,11 @@ feature_mysql() {
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
                 mysqldump --single-transaction "${DB}" | xz > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${DB}.sql.xz"
             done
-            # delete backups older than mysql retention, unless it's zero (infinite)
-            if [ "${BACKUP_MYSQL_RETENTION}" -gt '0' ]; then
-                find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*.tar.xz' -delete
-            fi
+        fi
+        # delete backups older than mysql retention, unless it's zero (infinite)
+        if [ "${BACKUP_MYSQL_RETENTION}" -gt '0' ]; then
+            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*.tar.xz' -delete
+            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*.tar.xz.gpg' -delete
         fi
     fi
 }

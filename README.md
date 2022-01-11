@@ -8,14 +8,14 @@
 * **Made for FreeBSD**: compatible with basic shell.
 
 ## How to use
-It's quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. The `--backup` argument makes sure all enabled backup features in `backupbot.conf` will be activated. If instead only one of the enabled backup features should be activated manually, just use the corresponding argument like `backupbot --files` or `backupbot --mysql`. To effectuate the chosen schedule for automatic backup, use `backupbot --cron` and `backupbot` will take care of it.
+It's quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. To effectuate the chosen schedule for automatic backup, use `backupbot --cron` and `backupbot` will take care of the rest.
 
 If both `mysql` and `files` features have been enabled, the output of the backup will look something like this:
 ```
 root@server:~ # ls -all -h /data/backup/
 drwxr-xr-x  2 root  wheel   512B Jul  1 15:36 .
 drwxr-xr-x  4 root  wheel   1.0K Jun 29 23:52 ..
--rw-r--r--  1 root  wheel   162K Jul  1 03:00 200701T0300-casusdag.sql.xz
+-rw-r--r--  1 root  wheel   162K Jul  1 03:00 200701T0300-blog.sql.xz
 -rw-r--r--  1 root  wheel   896M Jul  1 03:00 200701T0300-files.tar.xz
 -rw-r--r--  1 root  wheel    66K Jul  1 03:00 200701T0300-cloud_test.sql.xz
 -rw-r--r--  1 root  wheel    16M Jul  1 03:00 200701T0300-wp.sql.xz
@@ -33,6 +33,7 @@ wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backup
 chown root:wheel /usr/bin/backupbot
 chmod 555 /usr/bin/backupbot
 wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.conf -O /usr/local/etc/backupbot.conf
+nano /usr/local/etc/backupbot.conf
 backupbot --cron
 ```
 
@@ -40,6 +41,9 @@ backupbot --cron
 If you have questions, suggestion or find bugs, please let us know via the issue tracker.
 
 ## Changelog
+### 1.2.1-STABLE (11-01-2022)
+- Refactored retention feature to keep working when user switches from encrypted to unencrypted backups and vice versa.
+
 ### 1.2.0-STABLE (16-10-2021)
 - Added support for automatic removal of old backups/retention.
 
