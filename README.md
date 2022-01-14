@@ -41,6 +41,10 @@ backupbot --cron
 If you have questions, suggestion or find bugs, please let us know via the issue tracker.
 
 ## Changelog
+### 1.2.2-RELEASE (14-01-2022)
+- Fixed a bug in retention feature.
+- Switched from STABLE to RELEASE tag for releases.
+
 ### 1.2.1-STABLE (11-01-2022)
 - Refactored retention feature to keep working when user switches from encrypted to unencrypted backups and vice versa.
 
