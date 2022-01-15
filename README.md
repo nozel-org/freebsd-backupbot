@@ -3,12 +3,12 @@
 
 ## Features
 * **Easy to use**: get started in just a couple of minutes.
-* **Backup files and mysql databases**: with optional encryption.
+* **Backup files and mysql databases**: with optional compression and encryption.
 * **Configurable settings**: customize your backups, retention and schedule.
 * **Made for FreeBSD**: compatible with basic shell.
 
 ## How to use
-It's quite easy! Adjust the settings of `backupbot.conf` to taste and just run `backupbot --backup` to start the backup process. To effectuate the chosen schedule for automatic backup, use `backupbot --cron` and `backupbot` will take care of the rest.
+It's quite easy! Adjust the settings of `/usr/local/etc/backupbot.conf` to taste and run `backupbot --backup` to start the backup process. To effectuate the chosen schedule for automatic backups, use `backupbot --cron` and `backupbot` will take care of the rest.
 
 If both `mysql` and `files` features have been enabled, the output of the backup will look something like this:
 ```
@@ -41,6 +41,9 @@ backupbot --cron
 If you have questions, suggestion or find bugs, please let us know via the issue tracker.
 
 ## Changelog
+### 1.3.0-RELEASE (15-01-2022)
+- Added more compression alternatives: no compression, gzip, bzip2 and xz.
+
 ### 1.2.2-RELEASE (14-01-2022)
 - Fixed a bug in retention feature.
 - Switched from STABLE to RELEASE tag for releases.
