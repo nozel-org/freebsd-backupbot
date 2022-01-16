@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ################################################################################
-# Version 1.3.0-RELEASE (15-01-2022)
+# Version 1.4.0-RELEASE (16-01-2022)
 ################################################################################
 
 ################################################################################
@@ -20,27 +20,39 @@
 ################################################################################
 
 # serverbot version
-BACKUPBOT_VERSION='1.3.0'
+BACKUPBOT_VERSION='1.4.0'
 
 # backupbot parameters can be configured in /usr/local/etc/backupbot.conf
 # if the backupbot configuration file exists, it gets sourced by backupbot
 if [ -f /usr/local/etc/backupbot.conf ]; then
-    # populate all usable variables for checking validity later on
+    # populate all usable variables to check validity later on
     AUTOMATIC_BACKUP_ENABLE='0'
-    AUTOMATIC_BACKUP_CRON='0'
-    BACKUP_ENCRYPTION='0'
+    AUTOMATIC_BACKUP_DAILY='0'
+    AUTOMATIC_BACKUP_WEEKLY='0'
+    BACKUP_ENCRYPTION_ENABLE='0'
     BACKUP_ENCRYPTION_SECRET='0'
     BACKUP_FILES_ENABLE='0'
     BACKUP_FILES_PREFIX='0'
-    BACKUP_FILES_RETENTION='0'
+    BACKUP_FILES_RETENTION_DAILY='0'
+    BACKUP_FILES_RETENTION_WEEKLY='0'
     BACKUP_FILES_COMPRESSION='0'
     BACKUP_FILES_DESTINATION='0'
     BACKUP_FILES='0'
     BACKUP_MYSQL_ENABLE='0'
     BACKUP_MYSQL_PREFIX='0'
-    BACKUP_MYSQL_RETENTION='0'
+    BACKUP_MYSQL_RETENTION_DAILY='0'
+    BACKUP_MYSQL_RETENTION_WEEKLY='0'
     BACKUP_MYSQL_COMPRESSION='0'
     BACKUP_MYSQL_DESTINATION='0'
+    ARGUMENT_VERSION='0'
+    ARGUMENT_HELP='0'
+    ARGUMENT_CRON='0'
+    ARGUMENT_BACKUP='0'
+    ARGUMENT_FILES='0'
+    ARGUMENT_MYSQL='0'
+    ARGUMENT_DAILY='0'
+    ARGUMENT_WEEKLY='0'
+    ARGUMENT_NONE='0'
 
     # and source backupbot.conf
     . /usr/local/etc/backupbot.conf
@@ -98,6 +110,15 @@ while test -n "$1"; do
             ;;
 
         # other
+        --daily)
+            ARGUMENT_DAILY='1'
+            shift
+            ;;
+
+        --weekly)
+            ARGUMENT_WEEKLY='1'
+            shift
+            ;;
         *)
             ARGUMENT_NONE='1'
             shift
@@ -167,6 +188,11 @@ error_compression_not_configured() {
     exit 1
 }
 
+error_daily_backup_not_configured() {
+    echo 'backupbot: error: AUTOMATIC_BACKUP_DAILY is not configured properly in /usr/local/etc/backupbot.conf'
+    exit 1
+}
+
 ################################################################################
 # REQUIREMENT FUNCTIONS
 ################################################################################
@@ -183,24 +209,34 @@ requirement_argument_validity() {
     if [ "${BACKUP_FILES_ENABLE}" = 'YES' ] && [ "${BACKUP_FILES}" = '0' ]; then
         error_source_not_configured
     fi
-    # enabled automatic backup must have a configured cron parameter
-    if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ] && [ "${AUTOMATIC_BACKUP_CRON}" = '0' ]; then
-        error_cron_not_configured
-    fi
     # at least one backup feature must be enabled
     if [ "${BACKUP_FILES_ENABLE}" = '0' ] && [ "${BACKUP_MYSQL_ENABLE}" = '0' ]; then
         error_no_feature_configured
     fi
     # backup feature retention must be a integer
-    if ! [ "${BACKUP_FILES_RETENTION}" -eq "${BACKUP_FILES_RETENTION}" ] 2> /dev/null; then
+    if ! [ "${BACKUP_FILES_RETENTION_DAILY}" -eq "${BACKUP_FILES_RETENTION_DAILY}" ] 2> /dev/null; then
         error_retention_not_integer
     fi
-    if ! [ "${BACKUP_MYSQL_RETENTION}" -eq "${BACKUP_MYSQL_RETENTION}" ] 2> /dev/null; then
+    if ! [ "${BACKUP_FILES_RETENTION_WEEKLY}" -eq "${BACKUP_FILES_RETENTION_WEEKLY}" ] 2> /dev/null; then
+        error_retention_not_integer
+    fi
+    if ! [ "${BACKUP_MYSQL_RETENTION_DAILY}" -eq "${BACKUP_MYSQL_RETENTION_DAILY}" ] 2> /dev/null; then
+        error_retention_not_integer
+    fi
+    if ! [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -eq "${BACKUP_MYSQL_RETENTION_WEEKLY}" ] 2> /dev/null; then
         error_retention_not_integer
     fi
     # compression feature number must be 0, 2, 3 or 4
     if [ "${BACKUP_FILES_COMPRESSION}" != '0' ] && [ "${BACKUP_FILES_COMPRESSION}" != '1' ] && [ "${BACKUP_FILES_COMPRESSION}" != '2' ] && [ "${BACKUP_FILES_COMPRESSION}" != '3' ]; then
         error_compression_not_configured
+    fi
+    # daily backup needs to be configured for automatic backup to work
+    if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ] && [ "${AUTOMATIC_BACKUP_DAILY}" = '0' ]; then
+        error_daily_backup_not_configured
+    fi
+    # weekly and daily backups can't be used at the same time
+    if [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
+        error_invalid_argument
     fi
 }
 
@@ -225,12 +261,27 @@ requirement_gpg() {
     fi
 }
 
+requirement_prevent_backup_overlap() {
+    # weekly and daily backup schedules will overlap for one day a week, this will prevent that from happening
+    if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ]; then
+        if [ "${AUTOMATIC_BACKUP_DAILY}" -ge 0 ] && [ "${AUTOMATIC_BACKUP_DAILY}" -le 23 ]; then
+            if [ "${AUTOMATIC_BACKUP_WEEKLY}" -ge 1 ] && [ "${AUTOMATIC_BACKUP_WEEKLY}" -le 7 ]; then
+                if [ "${AUTOMATIC_BACKUP_WEEKLY}" -eq "$(date '+%u')" ]; then
+                    if [ "${ARGUMENT_DAILY}" = '1' ]; then
+                        exit 0
+                    fi
+                fi
+            fi
+        fi
+    fi
+}
+
 ################################################################################
 # GENERAL FUNCTIONS
 ################################################################################
 
 option_version() {
-    echo "Backupbot ${BACKUPBOT_VERSION}"
+    echo "backupbot version ${BACKUPBOT_VERSION}"
     echo "Copyright (C) 2019-2022 Nozel."
     echo "License CC Attribution-NonCommercial-ShareAlike 4.0 Int."
     echo
@@ -253,16 +304,25 @@ option_help() {
 }
 
 option_cron() {
-    echo 'Removing old backupbot cronjob'
+    echo '[1] Removing old backupbot cronjob'
     rm -f /etc/cron.d/backupbot
     if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ]; then
-        echo 'Updating cronjob for backupbot'
-        echo '# This cronjob activates backupbot on the chosen schedule' > /etc/cron.d/backupbot
-        echo "${AUTOMATIC_BACKUP_CRON} root /usr/bin/backupbot --backup" >> /etc/cron.d/backupbot
+        if [ "${AUTOMATIC_BACKUP_DAILY}" -ge 0 ] && [ "${AUTOMATIC_BACKUP_DAILY}" -le 23 ]; then
+        echo "[2] Adding daily scheduled backup on ${AUTOMATIC_BACKUP_DAILY}:00"
+        echo '# This cronjob activates backupbot daily on the chosen schedule' > /etc/cron.d/backupbot
+        echo "0 ${AUTOMATIC_BACKUP_DAILY} * * * root /usr/bin/backupbot --backup --daily" >> /etc/cron.d/backupbot
+        fi
+        if [ "${AUTOMATIC_BACKUP_WEEKLY}" -ge 1 ] && [ "${AUTOMATIC_BACKUP_WEEKLY}" -le 7 ]; then
+        echo "[3] Adding weekly scheduled backup on day ${AUTOMATIC_BACKUP_WEEKLY}"
+        echo '' >> /etc/cron.d/backupbot
+        echo '# This cronjob activates backupbot weekly on the chosen schedule' >> /etc/cron.d/backupbot
+        echo "0 ${AUTOMATIC_BACKUP_DAILY} * * ${AUTOMATIC_BACKUP_WEEKLY} root /usr/bin/backupbot --backup --weekly" >> /etc/cron.d/backupbot
+        fi
+        echo
+        echo 'All done! Your new schedule can be found in /etc/cron.d/backupbot'
     else
         echo 'Automatic backup is disabled, skipping creation of cronjob'
     fi
-    echo 'Done!'
 }
 
 ################################################################################
@@ -290,84 +350,94 @@ option_cron() {
 
 feature_files() {
     if [ "${BACKUP_FILES_ENABLE}" = 'YES' ]; then
+        # change file name depending on whether its a manual, daily or weekly backup
+        if [ "${ARGUMENT_DAILY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            BACKUP_FILES_SUFFIX='files'
+        elif [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            BACKUP_FILES_SUFFIX='daily-files'
+        elif [ "${ARGUMENT_DAILY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
+            BACKUP_FILES_SUFFIX='weekly-files'
+        fi
+
         # check configured backup compression and create variables for arguments and file extension
         if [ "${BACKUP_FILES_COMPRESSION}" = '0' ]; then
             TAR_COMPRESSION_ARGUMENT=''
-            FILES_FILE_EXTENSION='tar'
+            BACKUP_FILES_EXTENSION='tar'
         elif [ "${BACKUP_FILES_COMPRESSION}" = '1' ]; then
             TAR_COMPRESSION_ARGUMENT='--gzip'
-            FILES_FILE_EXTENSION='tar.gz'
+            BACKUP_FILES_EXTENSION='tar.gz'
         elif [ "${BACKUP_FILES_COMPRESSION}" = '2' ]; then
             TAR_COMPRESSION_ARGUMENT='--bzip2'
-            FILES_FILE_EXTENSION='tar.bz2'
+            BACKUP_FILES_EXTENSION='tar.bz2'
         elif [ "${BACKUP_FILES_COMPRESSION}" = '3' ]; then
             TAR_COMPRESSION_ARGUMENT='--xz'
-            FILES_FILE_EXTENSION='tar.xz'
+            BACKUP_FILES_EXTENSION='tar.xz'
         fi
 
         # check whether backup encryption is enabled
-        if [ "${BACKUP_ENCRYPTION}" = 'YES' ]; then
+        if [ "${BACKUP_ENCRYPTION_ENABLE}" = 'YES' ]; then
             requirement_gpg
-            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-files.${FILES_FILE_EXTENSION}.gpg"
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
         else
-            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-files.${FILES_FILE_EXTENSION}" ${BACKUP_FILES}
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}" ${BACKUP_FILES}
         fi
 
         # delete backups older than file retention, unless it's zero (infinite)
-        if [ "${BACKUP_FILES_RETENTION}" -gt '0' ]; then
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.gz' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.bz2' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.xz' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.gpg' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.gz.gpg' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.bz2.gpg' -delete
-            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION}" -name '*files.tar.xz.gpg' -delete
+        if [ "${BACKUP_FILES_RETENTION_DAILY}" -gt '0' ]; then
+            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION_DAILY}" -name '*-daily-files*' -delete
+        fi
+        if [ "${BACKUP_FILES_RETENTION_WEEKLY}" -gt '0' ]; then
+            find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION_WEEKLY}" -name '*-weekly-files*' -delete
         fi
     fi
 }
 
 feature_mysql() {
     if [ "${BACKUP_MYSQL_ENABLE}" = 'YES' ]; then
+        # change file name depending on whether its a manual, daily or weekly backup
+        if [ "${ARGUMENT_DAILY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            BACKUP_MYSQL_SUFFIX='mysql'
+        elif [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            BACKUP_MYSQL_SUFFIX='daily-mysql'
+        elif [ "${ARGUMENT_DAILY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
+            BACKUP_MYSQL_SUFFIX='weekly-mysql'
+        fi
+
         # check configured backup compression and create variables for arguments and file extension
         if [ "${BACKUP_MYSQL_COMPRESSION}" = '0' ]; then
             MYSQL_COMPRESSION_ARGUMENT='cat'
-            MYSQL_FILE_EXTENSION='sql'
+            BACKUP_MYSQL_EXTENSION='sql'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '1' ]; then
             MYSQL_COMPRESSION_ARGUMENT='gzip'
-            MYSQL_FILE_EXTENSION='sql.gz'
+            BACKUP_MYSQL_EXTENSION='sql.gz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '2' ]; then
             MYSQL_COMPRESSION_ARGUMENT='bzip2'
-            MYSQL_FILE_EXTENSION='sql.bz2'
+            BACKUP_MYSQL_EXTENSION='sql.bz2'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '3' ]; then
             MYSQL_COMPRESSION_ARGUMENT='xz'
-            MYSQL_FILE_EXTENSION='sql.xz'
+            BACKUP_MYSQL_EXTENSION='sql.xz'
         fi
 
         # check whether backup encryption is enabled
-        if [ "${BACKUP_ENCRYPTION}" = 'YES' ]; then
+        if [ "${BACKUP_ENCRYPTION_ENABLE}" = 'YES' ]; then
             requirement_gpg
             # create a list of all user created mysql databases and mysqldump them to their own file
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
-                mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${DB}.${MYSQL_FILE_EXTENSION}.gpg"
+                mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
             done
         else
             # create a list of all user created mysql databases and mysqldump them to their own file
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
-                mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${DB}.${MYSQL_FILE_EXTENSION}"
+                mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}"
             done
         fi
 
         # delete backups older than mysql retention, unless it's zero (infinite)
-        if [ "${BACKUP_MYSQL_RETENTION}" -gt '0' ]; then
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.gz' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.bz2' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.xz' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.gpg' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.gz.gpg' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.bz2.gpg' -delete
-            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION}" -name '*sql.xz.gpg' -delete
+        if [ "${BACKUP_MYSQL_RETENTION_DAILY}" -gt '0' ]; then
+            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION_DAILY}" -name '*-daily-mysql*' -delete
+        fi
+        if [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -gt '0' ]; then
+            find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION_WEEKLY}" -name '*-weekly-mysql*' -delete
         fi
     fi
 }
@@ -396,6 +466,7 @@ backupbot_main() {
     elif [ "${ARGUMENT_BACKUP}" = '1' ]; then
         requirement_root
         requirement_os
+        requirement_prevent_backup_overlap
         feature_files
         feature_mysql
         exit 0

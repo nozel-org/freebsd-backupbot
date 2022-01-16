@@ -1,9 +1,9 @@
 # backupbot
-`backupbot` is a easy to use tool for creating (automated) backups on FreeBSD. Currently files and mysql databases are supported, but more features can be added in the future.
+`backupbot` is a easy to use tool for creating (automatic) backups on FreeBSD. Currently files and mysql databases are supported, but more features can be added in the future.
 
 ## Features
 * **Easy to use**: get started in just a couple of minutes.
-* **Backup files and mysql databases**: with optional compression and encryption.
+* **Backup files and mysql databases**: daily and weekly backups with optional compression and encryption.
 * **Configurable settings**: customize your backups, retention and schedule.
 * **Made for FreeBSD**: compatible with basic shell.
 
@@ -41,6 +41,15 @@ backupbot --cron
 If you have questions, suggestion or find bugs, please let us know via the issue tracker.
 
 ## Changelog
+### 1.4.0-RELEASE (16-01-2022)
+- Added daily backup and weekly backup cycles.
+- Extended automatic cron generation to include daily and weekly backup cycles.
+- Extended retention to include daily and weekly backup cycles.
+- Changed backup file names to reflect whether its a daily, weekly or manual backup.
+- Changed the order of backup file name components to be more easy to read.
+- Made default configuration file more compact and easy to read.
+- Made some variable names more consistent.
+
 ### 1.3.0-RELEASE (15-01-2022)
 - Added more compression alternatives: no compression, gzip, bzip2 and xz.
 
