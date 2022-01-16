@@ -38,7 +38,7 @@ backupbot --cron
 ```
 
 ## Support
-The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/manual.txt) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
+The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/manual.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
 
 ## Changelog
 ### 1.4.0-RELEASE (16-01-2022)
