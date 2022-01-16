@@ -29,7 +29,7 @@ drwxr-xr-x  4 root  wheel   1.0K Jun 29 23:52 ..
 This will look something like:
 ```
 # install backupbot
-wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.sh -O /usr/bin/backupbot
+wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot -O /usr/bin/backupbot
 chown root:wheel /usr/bin/backupbot
 chmod 555 /usr/bin/backupbot
 wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.conf -O /usr/local/etc/backupbot.conf
@@ -38,7 +38,7 @@ backupbot --cron
 ```
 
 ## Support
-If you have questions, suggestion or find bugs, please let us know via the issue tracker.
+The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/manual.txt) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
 
 ## Changelog
 ### 1.4.0-RELEASE (16-01-2022)
