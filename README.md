@@ -38,9 +38,16 @@ backupbot --cron
 ```
 
 ## Support
-The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/manual.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
+The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/MANUAL.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
 
 ## Changelog
+### 1.5.0-RELEASE (18-01-2022)
+- Refactored encryption feature to be configurable for every backup feature instead of it being a general setting.
+- Simplified the eonfoguration of encryption by reducing the required configuration variable to one.
+- Improved default settings and removed unneeded checks on default values.
+- Fixed a bug where choosing 00:00 as the daily backup time would not work properly.
+- Expanded and improved the backupbot manual.
+
 ### 1.4.0-RELEASE (16-01-2022)
 - Added daily backup and weekly backup cycles.
 - Extended automatic cron generation to include daily and weekly backup cycles.

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ################################################################################
-# Version 1.4.0-RELEASE (16-01-2022)
+# Version 1.5.0-RELEASE (18-01-2022)
 ################################################################################
 
 ################################################################################
@@ -20,30 +20,30 @@
 ################################################################################
 
 # serverbot version
-BACKUPBOT_VERSION='1.4.0'
+BACKUPBOT_VERSION='1.5.0'
 
 # backupbot parameters can be configured in /usr/local/etc/backupbot.conf
 # if the backupbot configuration file exists, it gets sourced by backupbot
 if [ -f /usr/local/etc/backupbot.conf ]; then
-    # populate all usable variables to check validity later on
-    AUTOMATIC_BACKUP_ENABLE='0'
+    # populate all usable variables to have defaults and check validity later on
+    AUTOMATIC_BACKUP_ENABLE='NO'
     AUTOMATIC_BACKUP_DAILY='0'
     AUTOMATIC_BACKUP_WEEKLY='0'
-    BACKUP_ENCRYPTION_ENABLE='0'
-    BACKUP_ENCRYPTION_SECRET='0'
-    BACKUP_FILES_ENABLE='0'
-    BACKUP_FILES_PREFIX='0'
+    BACKUP_FILES_ENABLE='NO'
+    BACKUP_FILES_DESTINATION='0'
     BACKUP_FILES_RETENTION_DAILY='0'
     BACKUP_FILES_RETENTION_WEEKLY='0'
     BACKUP_FILES_COMPRESSION='0'
-    BACKUP_FILES_DESTINATION='0'
+    BACKUP_FILES_ENCRYPTION='NO'
     BACKUP_FILES='0'
-    BACKUP_MYSQL_ENABLE='0'
-    BACKUP_MYSQL_PREFIX='0'
+    BACKUP_FILES_PREFIX="$(date +%y%m%dT%H%M%S)"
+    BACKUP_MYSQL_ENABLE='NO'
+    BACKUP_MYSQL_DESTINATION='0'
     BACKUP_MYSQL_RETENTION_DAILY='0'
     BACKUP_MYSQL_RETENTION_WEEKLY='0'
     BACKUP_MYSQL_COMPRESSION='0'
-    BACKUP_MYSQL_DESTINATION='0'
+    BACKUP_MYSQL_ENCRYPTION='NO' 
+    BACKUP_MYSQL_PREFIX="$(date +%y%m%dT%H%M%S)"
     ARGUMENT_VERSION='0'
     ARGUMENT_HELP='0'
     ARGUMENT_CRON='0'
@@ -56,14 +56,6 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
 
     # and source backupbot.conf
     . /usr/local/etc/backupbot.conf
-
-    # and finally use default values for unconfigured parameters
-    if [ "${BACKUP_FILES_PREFIX}" = '0' ]; then
-        BACKUP_FILES_PREFIX="$(date +%y%m%dT%H%M)"
-    fi
-    if [ "${BACKUP_MYSQL_PREFIX}" = '0' ]; then
-        BACKUP_MYSQL_PREFIX="$(date +%y%m%dT%H%M)"
-    fi
 else
     # if backupbot.conf does not exist, return this error 
     echo 'backupbot: error: /usr/local/etc/backupbot.conf is required but cannot be found'
@@ -210,7 +202,7 @@ requirement_argument_validity() {
         error_source_not_configured
     fi
     # at least one backup feature must be enabled
-    if [ "${BACKUP_FILES_ENABLE}" = '0' ] && [ "${BACKUP_MYSQL_ENABLE}" = '0' ]; then
+    if [ "${BACKUP_FILES_ENABLE}" = 'NO' ] && [ "${BACKUP_MYSQL_ENABLE}" = 'NO' ]; then
         error_no_feature_configured
     fi
     # backup feature retention must be a integer
@@ -230,11 +222,10 @@ requirement_argument_validity() {
     if [ "${BACKUP_FILES_COMPRESSION}" != '0' ] && [ "${BACKUP_FILES_COMPRESSION}" != '1' ] && [ "${BACKUP_FILES_COMPRESSION}" != '2' ] && [ "${BACKUP_FILES_COMPRESSION}" != '3' ]; then
         error_compression_not_configured
     fi
-    # daily backup needs to be configured for automatic backup to work
-    if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ] && [ "${AUTOMATIC_BACKUP_DAILY}" = '0' ]; then
-        error_daily_backup_not_configured
+    if [ "${BACKUP_MYSQL_COMPRESSION}" != '0' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '1' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '2' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '3' ]; then
+        error_compression_not_configured
     fi
-    # weekly and daily backups can't be used at the same time
+     # weekly and daily backup arguments can't be used at the same time
     if [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
         error_invalid_argument
     fi
@@ -375,9 +366,9 @@ feature_files() {
         fi
 
         # check whether backup encryption is enabled
-        if [ "${BACKUP_ENCRYPTION_ENABLE}" = 'YES' ]; then
+        if [ "${BACKUP_FILES_ENCRYPTION}" != 'NO' ]; then
             requirement_gpg
-            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_FILES_ENCRYPTION}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
         else
             tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}" ${BACKUP_FILES}
         fi
@@ -419,11 +410,11 @@ feature_mysql() {
         fi
 
         # check whether backup encryption is enabled
-        if [ "${BACKUP_ENCRYPTION_ENABLE}" = 'YES' ]; then
+        if [ "${BACKUP_MYSQL_ENCRYPTION}" != 'NO' ]; then
             requirement_gpg
             # create a list of all user created mysql databases and mysqldump them to their own file
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
-                mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_ENCRYPTION_SECRET}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
+                mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_MYSQL_ENCRYPTION}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
             done
         else
             # create a list of all user created mysql databases and mysqldump them to their own file

@@ -10,6 +10,8 @@
 * Customizable backup location for both file and MySQL database backups.
 * Customizable file name prefix.
 
+<hr>
+
 ## 1 How to use
 When in doubt, you can use `backupbot --help` to help you on your way:
 ```
@@ -38,6 +40,8 @@ Written by Sebas Veeke
 ```
 How to use the other features such as `--backup`, `--files` and `--mysql` is explained in chapter 3.
 
+<hr>
+
 ## 2 How to install
 `backupbot` consists of two files: `/usr/bin/backupbot` and `/usr/local/etc/backuptbot.conf`. These files can be downloaded from the [project's repository on GitHub](https://github.com/nozel-org/freebsd-backupbot). That being said, never trust some random stranger on the internet and always be cautious when installing new software from a random git repo. In this case `backupbot` is open source, so you can verify for yourself whether this software should be trusted or not.
 
@@ -57,44 +61,140 @@ chown root:wheel /usr/local/etc/backupbot.conf
 chmod 600 /usr/local/etc/backupbot.conf
 ```
 
-## 3 Features
-### 3.1 Manual backups
-Manual backup files will look like `prefix-files.tar` and `prefix-mysql-db_name.sql`.
+<hr>
 
-Before you can run manual backups, `BACKUP_FILES_ENABLE` and/or `BACKUP_MYSQL_ENABLE` needs to be set to `YES` in `/usr/local/etc/backupbot.conf`. When you're happy with the configuration you can run `backupbot --backup` to start the backup based on your settings (file backup, MySQL backup or both). If you wish to only backup files or only backup MySQL databases without changing the configuration in `/usr/local/etc/backupbot.conf`, you can also run `backupbot --mysql` or `backupbot --files`.
+## 3 Configuration
+`backupbot` needs a configuration file to work and this configuration file must be present in `/usr/local/etc/backupbot.conf`. The [default configuration file](https://github.com/nozel-org/freebsd-backupbot/blob/master/backupbot.conf) is commented for a fast and easy configuration, but below the available options are explained in more detail.
 
-### 3.2 Daily backups
-Daily backup files will look like `prefix-daily-files.tar` and `prefix-daily-mysql-db_name.sql`.
+### 3.1 Automatic backup
+Automatic backups can be configured to run either daily or both daily and weekly. By setting `AUTOMATIC_BACKUP_ENABLE='YES'`, automatic daily backups will run daily at `00:00`. To change the daily backup time, set `AUTOMATIC_BACKUP_DAILY=''` to a number between `0` (00:00) and `23` (23:00). 
 
-When automatic daily backups are configured by setting `AUTOMATIC_BACKUP_DAILY` in `/usr/local/etc/backupbot.conf`, the created cronjob (after running `backupbot --cron`) will run `backupbot` daily at the configured time. When weekly backups are configured as well, the daily backup won't run on the chosen weekly backup day. Example: you have configured the daily backups to run at 3:00 and the weekly backups to run on on sundays, then the daily backup will run from monday to saturday and skip sundays.
+To enable automatic weekly backups, set `AUTOMATIC_BACKUP_WEEKLY=''` to a number between `1` (monday) and `7` (sunday). Setting it to `0` will disable automatic weekly backups. When enabled, the weekly backup will run at the same time as the configured daily backup time.
 
-### 3.3 Weekly backups
-Weekly backup files will look like `prefix-weekly-files.tar` and `prefix-weekly-mysql-db_name.sql`.
+When both daily and weekly backups are configured, the daily backup won't run on the chosen weekly backup day. Example: you have configured the daily backups to run at 3:00 and the weekly backups to run on on sundays, then the daily backup will run from monday to saturday and skip sundays.
 
-When automatic weekly backups are configured by setting `AUTOMATIC_BACKUP_WEEKLY` in `/usr/local/etc/backupbot.conf`, the created cronjob (after running `backupbot --cron`) will run `backupbot` weekly at the configured day (monday-sunday). The daily backup won't run on the chosen weekly backup day.
+Run `backupbot --cron` to effectuate any changes made to the automatic backups configuration. This will create relevant `cron` jobs in the system.
 
-### 3.4 Compression
-Compression can be configured for both file and MySQL database backups by setting the `BACKUP_FILES_COMPRESSION` and `BACKUP_MYSQL_COMPRESSION` parameters in `/usr/local/etc/backupbot.conf` to either `0` for no compression, `1` for compression by `gzip`, `2` for compression by `bzip2` or `3` for compression by `xz`.
+| Automatic backup | Configuration |
+| ---------------- | ------------- |
+| `AUTOMATIC_BACKUP_ENABLE=''` | Set to `YES` to enable automatic backups. Set to `NO` to disable automatic backups. |
+| `AUTOMATIC_BACKUP_DAILY=''` | Set to a number between `0` (00:00) and `23` (23:00) to configure the daily backup process wil start. |
+| `AUTOMATIC_BACKUP_WEEKLY=''` | Set to a number between `1` (monday) and `7` (sunday) to configure the weekly backup day. Set to `0` to disable automatic weekly backups. |
 
-Especially databases can often benefit greatly from compression, but in most cases it's also worthwhile to compress files. Out of these three options, `gzip` has the lowest level of compression but is also by far the fastest. `xz` on the contrary has the highest level of compression but is many times slower than `gzip`. `bzip2` is in between `gzip` and `xz` in both level of compression and compression speed. For devices with a slower cpu/processor, `gzip` is recommended.
+### 3.2 File backup
+#### 3.2.1 Activate file backup
+File backups can be activated by setting `BACKUP_FILES_ENABLE='YES'`.
+
+#### 3.2.2 Set files to be backupped and backup destination
+The files that are part of the backup can be configured by setting folder(s) and/or file(s) in `BACKUP_FILES=''`. For example `'/etc'`, `'/usr/local/etc /usr/local/www /var/log'` and `'/usr/local/etc/apache24 /etc/rc.conf'` are all valid entries.
+
+The file backup destination can be configured by setting a folder in `BACKUP_FILES_DESTINATION=''`. For example `'/home/backup'` and `'/mnt/storage/backup'` are valid entries.
+
+Note that all entries should be seperated from each other with a space and that there should be no trailing `/` at the end of the folder names. If the list with file and folder locations in `BACKUP_FILES` is quite long, you can also make a list on multiple lines by using backslash newlines.
+
+#### 3.2.3 Retention
+When automatic daily backups are configured (see 4.1), the retention of automatic daily backups can be configured by setting `BACKUP_FILES_RETENTION_DAILY=''` to the amount of days you want daily backups to be kept.
+
+Likewise, when automatic weekly backups are configured (see 4.1), the retention of automatic weekly backups can be configured by setting `BACKUP_FILES_RETENTION_WEEKLY=''` to the amount of days you want weekly backups to be kept. This way it's for example possible to keep weekly backups for a longer period of time than daily backups.
+
+For both daily and weekly backup retention, setting the retention to `0` will keep backups indefinitely.
+
+#### 3.2.4 Compression
+Backups can be compressed automatically with gzip, bzip2 or xz by setting  `BACKUP_FILES_COMPRESSION=''` to `1` for gzip, to `2` for bzip2 and to `3` for xz. Compression can be disabled by setting `BACKUP_FILES_COMPRESSION=''` to `0`.
+
+Especially databases can often benefit greatly from compression, but in most cases it's also worthwhile to compress files. Out of these three options, gzip has the lowest level of compression but is also by far the fastest. xz on the contrary has the highest level of compression but is many times slower than gzip. bzip2 is in between gzip and xz in both level of compression and compression speed. For devices with a slower cpu/processor, gzip is recommended.
 
 For a comparison on a relatively slow server cpu, checkout this [Discussion](https://github.com/nozel-org/freebsd-backupbot/discussions/12).
 
-### 3.5 Encryption
-Backups can be encrypted automatically by setting `BACKUP_ENCRYPTION_ENABLE` to `YES` and setting a secret in `BACKUP_ENCRYPTION_SECRET` in `/usr/local/etc/backupbot.conf`.
+#### 3.2.5 Encryption
+Backups can be encrypted automatically with gpg by setting `BACKUP_FILES_ENCRYPTION=''` to a secret/passphrase of your choosing. Encryption can be disabled by setting `BACKUP_FILE_ENCRYPTION='NO'`.
 
-The encryption feature uses `gpg` to encrypt the backups and will check on the availability of `gpg` on the system when the encryption feature is enabled. Note that this encryption feature uses basic symmetrical encryption with a secret, so make sure other people can't extract the secret from `/usr/local/etc/backupbot.conf`. You can make `/usr/local/etc/backupbot.conf` readable only by root by setting `chown root:wheel /usr/local/etc/backupbot.conf` and `chmod 555 /usr/local/etc/backupbot.conf`.
+The program will check on the availability of gpg on the system when the encryption feature is enabled. Note that this encryption feature uses basic symmetrical encryption with a secret, so make sure other people can't extract the secret from `/usr/local/etc/backupbot.conf`. You can make `/usr/local/etc/backupbot.conf` readable only by root by setting `chown root:wheel /usr/local/etc/backupbot.conf` and `chmod 555 /usr/local/etc/backupbot.conf`.
 
 Store your secret in a safe place so you will never lose it by accident. You could save the secret in a password manager or on paper in a safe (make sure it's water and heat resistent).
 
-Decryption can be done with `gpg` and `tar` (for files), for example by running `gpg -d archive.tar.gz.gpg | tar -xvzf -`. Always test decryption before you set and forget the automatic backups by `backupbot`.
+Decryption can be done with gpg and tar, for example by running `gpg -d archive.tar.gz.gpg | tar -xvzf -`. Always test decryption before you set and forget the automatic backups by `backupbot`.
 
-### 3.6 Retention
-With the `BACKUP_FILES_RETENTION_DAILY` and `BACKUP_MYSQL_RETENTION_DAILY` parameters in `/usr/local/etc/backupbot.conf`, the amount of days that daily backups should be kept can be configured. Likewise with the `BACKUP_FILES_RETENTION_WEEKLY` and `BACKUP_MYSQL_RETENTION_WEEKLY` parameters in `/usr/local/etc/backupbot.conf`, the amount of days that weekly backups should be kept can be configured.
+#### 3.2.6 Custom file names
+The first part of the backup file name can be configured by setting `BACKUP_FILES_PREFIX=''`. The default option is `'$(date +%y%m%dT%H%M%S)'` which translates to the `YYMMDDThhmmss` format. In practise this could look like `220115T041145`, which would mean that the backup was created on 15 january 2022 at 4 hours 11 minutes and 45 seconds in the morning.
 
-This way it's for example possible to keep weekly backups for a longer period of time than daily backups.
+#### 3.2.7 Overview
+| File backup | Configuration |
+| ---------------- | ------------- |
+| `BACKUP_FILES_ENABLE=''` | Set to `YES` to enable file backup. Set to `NO` to disable file backup. |
+| `BACKUP_FILES=''` | Set to folder(s) and/or file(s) separated by a space. No trailing / at the end of folder and/or file names. |
+| `BACKUP_FILES_DESTINATION=''` | Set to a folder without a trailing / at the end of the folder name. |
+| `BACKUP_FILES_RETENTION_DAILY=''` | Set to `0` to keep backups indefinitely. Set to a number (amount of days) of `1` or higher to automatically remove older backups. |
+| `BACKUP_FILES_RETENTION_WEEKLY=''` | Set to `0` to keep backups indefinitely. Set to a number (amount of days) of `1` or higher to automatically remove older backups. |
+| `BACKUP_FILES_COMPRESSION=''` | Set to `1` (gzip), `2` (bzip2) or `3` (xz) to enable compression. Set to `0` to disable compression. |
+| `BACKUP_FILES_ENCRYPTION=''` | Set to secret/passphrase to enable encryption. Set to `NO` to disable encryption. |
+| `BACKUP_FILES_PREFIX=''` | "$(date +%y%m%dT%H%M%S)" |
 
-### 3.7 Cron
-When the daily and weekly backup features are configured, `backupbot` can automatically generate cronjobs for their respective schedules by using `backupbot --cron`. This will remove the old cronjob and replace it with a new cronjob based on the chosen parameters in `/usr/local/etc/backupbot.conf`.
+### 3.3 Mysql database backup
+#### 3.3.1 Activate mysql database backup
+Mysql database backups can be activated by setting `BACKUP_MYSQL_ENABLE='YES'`.
 
-The cronjob(s) is/are saved in `/etc/cron.d/backupbot`.
+For this backup feature to work, MySQL needs to be able to authenticate unattended. You can make this possible by creating a *.cnf file in `/usr/local/etc/mysql` with the following content:
+
+```
+[client]
+user='root'
+password='password'
+```
+
+#### 3.3.2 Set backup destination
+The file backup destination can be configured by setting a folder in `BACKUP_FILES_DESTINATION=''`. For example `'/home/backup'` and `'/mnt/storage/backup'` are valid entries. Note that there should be no trailing `/` at the end of the folder name.
+
+#### 3.3.3 Retention
+When automatic daily backups are configured (see 4.1), the retention of automatic daily backups can be configured by setting `BACKUP_MYSQL_RETENTION_DAILY=''` to the amount of days you want daily backups to be kept.
+
+Likewise, when automatic weekly backups are configured (see 4.1), the retention of automatic weekly backups can be configured by setting `BACKUP_MYSQL_RETENTION_WEEKLY=''` to the amount of days you want weekly backups to be kept. This way it's for example possible to keep weekly backups for a longer period of time than daily backups.
+
+For both daily and weekly backup retention, setting the retention to `0` will keep backups indefinitely.
+
+#### 3.3.4 Compression
+Backups can be compressed automatically with gzip, bzip2 or xz by setting  `BACKUP_MYSQL_COMPRESSION=''` to `1` for gzip, to `2` for bzip2 and to `3` for xz. Compression can be disabled by setting `BACKUP_MYSQL_COMPRESSION=''` to `0`.
+
+Especially databases can often benefit greatly from compression. Out of these three options, gzip has the lowest level of compression but is also by far the fastest. xz on the contrary has the highest level of compression but is many times slower than gzip. bzip2 is in between gzip and xz in both level of compression and compression speed. For devices with a slower cpu/processor, gzip is recommended.
+
+For a comparison on a relatively slow server cpu, checkout this [Discussion](https://github.com/nozel-org/freebsd-backupbot/discussions/12).
+
+#### 3.3.5 Encryption
+Backups can be encrypted automatically with gpg by setting `BACKUP_MYSQL_ENCRYPTION=''` to a secret/passphrase of your choosing. Encryption can be disabled by setting `BACKUP_MYSQL_ENCRYPTION='NO'`.
+
+The program will check on the availability of gpg on the system when the encryption feature is enabled. Note that this encryption feature uses basic symmetrical encryption with a secret, so make sure other people can't extract the secret from `/usr/local/etc/backupbot.conf`. You can make `/usr/local/etc/backupbot.conf` readable only by root by setting `chown root:wheel /usr/local/etc/backupbot.conf` and `chmod 555 /usr/local/etc/backupbot.conf`.
+
+Store your secret in a safe place so you will never lose it by accident. You could save the secret in a password manager or on paper in a safe (make sure it's water and heat resistent).
+
+Decryption can be done with gpg and tar, for example by running `gpg -d backup.sql.gz.gpg`. Always test decryption before you set and forget the automatic backups by `backupbot`.
+
+#### 3.3.6 Custom file names
+The first part of the backup file name can be configured by setting `BACKUP_MYSQL_PREFIX=''`. The default option is `'$(date +%y%m%dT%H%M%S)'` which translates to the `YYMMDDThhmmss` format. In practise this could look like `220115T041145`, which would mean that the backup was created on 15 january 2022 at 4 hours 11 minutes and 45 seconds in the morning.
+
+#### 3.3.7 Overview
+| File backup | Configuration |
+| ---------------- | ------------- |
+| `BACKUP_MYSQL_ENABLE=''` | Set to `YES` to enable mysql backup. Set to `NO` to disable mysql backup. |
+| `BACKUP_MYSQL_DESTINATION=''` | Set to a folder without a trailing / at the end of the folder name. |
+| `BACKUP_MYSQL_RETENTION_DAILY=''` | Set to `0` to keep backups indefinitely. Set to a number (amount of days) of `1` or higher to automatically remove older backups. |
+| `BACKUP_MYSQL_RETENTION_WEEKLY=''` | Set to `0` to keep backups indefinitely. Set to a number (amount of days) of `1` or higher to automatically remove older backups. |
+| `BACKUP_MYSQL_COMPRESSION=''` | Set to `1` (gzip), `2` (bzip2) or `3` (xz) to enable compression. Set to `0` to disable compression. |
+| `BACKUP_MYSQL_ENCRYPTION=''` | Set to secret/passphrase to enable encryption. Set to `NO` to disable encryption. |
+| `BACKUP_MYSQL_PREFIX=''` | "$(date +%y%m%dT%H%M%S)" |
+
+<hr>
+
+## 4 FAQ
+### 4.1 How do file names look?
+The configurable prefix (see 3.2.6 and 3.3.6) is the only part of the file name that is not static. Assuming the default prefix, file backups have the following naming schemes:
+
+| fffff | default | compression | encryption | both |
+| ----- | ------- | ----------- | ---------- | ---- |
+| Files (manual) | `YYMMDDThhmmss-files.tar` | `YYMMDDThhmmss-files.tar.gz`<br>`YYMMDDThhmmss-files.tar.bz2`<br>`YYMMDDThhmmss-files.tar.xz` | `YYMMDDThhmmss-files.tar.gpg` | `YYMMDDThhmmss-files.tar.gz.gpg`<br>`YYMMDDThhmmss-files.tar.bz2.gpg`<br>`YYMMDDThhmmss-files.tar.xz.gpg` |
+| Files (daily) | `YYMMDDThhmmss-daily-files.tar` | `YYMMDDThhmmss-daily-files.tar.gz`<br>`YYMMDDThhmmss-daily-files.tar.bz2`<br>`YYMMDDThhmmss-daily-files.tar.xz` | `YYMMDDThhmmss-daily-files.tar.gpg` | `YYMMDDThhmmss-daily-files.tar.gz.gpg`<br>`YYMMDDThhmmss-daily-files.tar.bz2.gpg`<br>`YYMMDDThhmmss-daily-files.tar.xz.gpg` |
+| Files (weekly) | `YYMMDDThhmmss-weekly-files.tar` | `YYMMDDThhmmss-weekly-files.tar.gz`<br>`YYMMDDThhmmss-weekly-files.tar.bz2`<br>`YYMMDDThhmmss-weekly-files.tar.xz` | `YYMMDDThhmmss-weekly-files.tar.gpg` | `YYMMDDThhmmss-weekly-files.tar.gz.gpg`<br>`YYMMDDThhmmss-weekly-files.tar.bz2.gpg`<br>`YYMMDDThhmmss-weekly-files.tar.xz.gpg` |
+| MySQL (manual) | `YYMMDDThhmmss-mysql-db.sql` | `YYMMDDThhmmss-mysql-db.sql.gz`<br>`YYMMDDThhmmss-mysql-db.sql.bz2`<br>`YYMMDDThhmmss-mysql-db.sql.xz` | `YYMMDDThhmmss-mysql-db.sql` | `YYMMDDThhmmss-mysql-db.sql.gz.gpg`<br>`YYMMDDThhmmss-mysql-db.sql.bz2.gpg`<br>`YYMMDDThhmmss-mysql-db.sql.xz.gpg` |
+| MySQL (daily) | `YYMMDDThhmmss-daily-mysql-db.sql` | `YYMMDDThhmmss-daily-mysql-db.sql.gz`<br>`YYMMDDThhmmss-daily-mysql-db.sql.bz2`<br>`YYMMDDThhmmss-daily-mysql-db.sql.xz` | `YYMMDDThhmmss-daily-mysql-db.sql` | `YYMMDDThhmmss-daily-mysql-db.sql.gz.gpg`<br>`YYMMDDThhmmss-daily-mysql-db.sql.bz2.gpg`<br>`YYMMDDThhmmss-daily-mysql-db.sql.xz.gpg` |
+| MySQL (weekly) | `YYMMDDThhmmss-weekly-mysql-db.sql` | `YYMMDDThhmmss-weekly-mysql-db.sql.gz`<br>`YYMMDDThhmmss-weekly-mysql-db.sql.bz2`<br>`YYMMDDThhmmss-weekly-mysql-db.sql.xz` | `YYMMDDThhmmss-weekly-mysql-db.sql` | `YYMMDDThhmmss-weekly-mysql-db.sql.gz.gpg`<br>`YYMMDDThhmmss-weekly-mysql-db.sql.bz2.gpg`<br>`YYMMDDThhmmss-weekly-mysql-db.sql.xz.gpg` |
+
+<hr>
