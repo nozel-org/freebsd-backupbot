@@ -4,7 +4,7 @@
 ## Features
 * **Easy to use**: get started in just a couple of minutes.
 * **Backup files and mysql databases**: daily and weekly backups with optional compression and encryption.
-* **Configurable settings**: customize your backups, retention and schedule.
+* **Configurable settings**: customize your backups, ownership, retention and schedule.
 * **Made for FreeBSD**: compatible with basic shell.
 
 ## How to use
@@ -41,6 +41,10 @@ backupbot --cron
 The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/MANUAL.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
 
 ## Changelog
+### 1.6.0-RELEASE (27-05-2022)
+- Added configurable automatic ownership of backups.
+- Added rudimentary logging of backupbot's actions.
+
 ### 1.5.1-RELEASE (20-01-2022)
 - Fixed a bug that would show an error when using --version or --help was used if the configuration file wasn't configured properly.
 
