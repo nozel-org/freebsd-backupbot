@@ -84,6 +84,7 @@ Run `backupbot --cron` to effectuate any changes made to the automatic backups c
 | `AUTOMATIC_BACKUP_ENABLE=''` | Set to `YES` to enable automatic backups. Set to `NO` to disable automatic backups. |
 | `AUTOMATIC_BACKUP_DAILY=''` | Set to a number between `0` (00:00) and `23` (23:00) to configure the daily backup process wil start. |
 | `AUTOMATIC_BACKUP_WEEKLY=''` | Set to a number between `1` (monday) and `7` (sunday) to configure the weekly backup day. Set to `0` to disable automatic weekly backups. |
+| `RANDOM_DELAY=''` | Set to 'YES' to add a random delay between 0 and 3600 seconds (1 hour) before the automated backup process starts. Set to `NO` to disable the random delay. |
 
 ### 3.3 File backup
 #### 3.3.1 Activate file backup
