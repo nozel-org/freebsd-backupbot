@@ -1,11 +1,11 @@
 #!/bin/sh
 
 ################################################################################
-# Version 1.6.0-RELEASE (27-05-2022)
+# Version 1.7.0-RELEASE (18-12-2022)
 ################################################################################
 
 ################################################################################
-# Copyright 2019-2022 Nozel/Sebas Veeke. Licenced under a Creative Commons
+# Copyright 2019-2023 Nozel/Sebas Veeke. Licenced under a Creative Commons
 # Attribution-NonCommercial-ShareAlike 4.0 International License.
 #
 # See https://creativecommons.org/licenses/by-nc-sa/4.0/
@@ -20,13 +20,14 @@
 ################################################################################
 
 # serverbot version
-BACKUPBOT_VERSION='1.6.0'
+BACKUPBOT_VERSION='1.7.0'
 
 # backupbot parameters can be configured in /usr/local/etc/backupbot.conf
 # if the backupbot configuration file exists, it gets sourced by backupbot
 if [ -f /usr/local/etc/backupbot.conf ]; then
     # populate all usable variables to have defaults and check validity later on
     BACKUPBOT_LOG='0'
+    RANDOM_DELAY='0'
     AUTOMATIC_BACKUP_ENABLE='NO'
     AUTOMATIC_BACKUP_DAILY='0'
     AUTOMATIC_BACKUP_WEEKLY='0'
@@ -38,6 +39,7 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
     BACKUP_FILES_ENCRYPTION='NO'
     BACKUP_FILES_OWNER='0' 
     BACKUP_FILES_GROUP='0'
+    BACKUP_FILES_PERMISSIONS='0'
     BACKUP_FILES='0'
     BACKUP_FILES_PREFIX="$(date +%y%m%dT%H%M%S)"
     BACKUP_MYSQL_ENABLE='NO'
@@ -48,6 +50,7 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
     BACKUP_MYSQL_ENCRYPTION='NO'
     BACKUP_MYSQL_OWNER='root'
     BACKUP_MYSQL_GROUP='wheel'
+    BACKUP_MYSQL_PERMISSIONS='0'
     BACKUP_MYSQL_PREFIX="$(date +%y%m%dT%H%M%S)"
     ARGUMENT_VERSION='0'
     ARGUMENT_HELP='0'
@@ -72,15 +75,22 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
     if [ "${BACKUP_FILES_GROUP}" = '0' ]; then
         BACKUP_FILES_GROUP='wheel'
     fi
+    if [ "${BACKUP_FILES_PERMISSIONS}" = '0' ]; then
+        BACKUP_FILES_PERMISSIONS='640'
+    fi
     if [ "${BACKUP_MYSQL_OWNER}" = '0' ]; then
         BACKUP_MYSQL_OWNER='root'
     fi
     if [ "${BACKUP_MYSQL_GROUP}" = '0' ]; then
         BACKUP_MYSQL_GROUP='wheel'
     fi
+    if [ "${BACKUP_MYSQL_PERMISSIONS}" = '0' ]; then
+        BACKUP_MYSQL_PERMISSIONS='640'
+    fi
+
 else
     # if backupbot.conf does not exist, return this error 
-    echo 'backupbot: error: /usr/local/etc/backupbot.conf is required but cannot be found'
+    printf 'backupbot: error: /usr/local/etc/backupbot.conf is required but cannot be found\n'
     exit 1
 fi
 
@@ -146,64 +156,63 @@ done
 
 # requirement errors
 error_invalid_argument() {
-    echo 'backupbot: error: used argument is invalid, use "backuptbot --help" for proper usage'
+    printf 'backupbot: error: used argument is invalid, use "backuptbot --help" for proper usage\n'
     exit 1
 }    
 
 error_no_root_privileges() {
-    echo 'backupbot: error: used argument must be run with root privileges'
+    printf 'backupbot: error: used argument must be run with root privileges\n'
     exit 1
 }
 
 error_os_not_supported() {
-    echo 'backupbot: operating system is not supported'
+    printf 'backupbot: operating system is not supported\n'
     exit 1
 }
 
 # configuration errors
 error_destination_not_configured() {
-    echo 'backupbot: error: backup destination is not configured properly in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: BACKUP_*_DESTINATION is not configured properly in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
 error_source_not_configured() {
-    echo 'backupbot: error: backup source is not configured properly in /usr/local/etc/backupbot.conf'
-    exit 1
-}
-
-error_cron_not_configured() {
-    echo 'backupbot: error: cron is not configured properly in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: BACKUP_FILES is not configured properly in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
 error_no_feature_configured() {
-    echo 'backupbot: error: no backup feature is enabled in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: no backup feature is enabled in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
 error_retention_not_integer() {
-    echo 'backupbot: error: retention should be a positive number in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: BACKUP_FILES_RETENTION_* should be a positive number in /usr/local/etc/backupbot.conf\n'
+    exit 1
+}
+
+error_permissions_not_integer() {
+    printf 'backupbot: error: BACKUP_FILES_PERMISSIONS should be a valid unix file system permission (i.e. 640) in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
 error_feature_not_configured() {
-    echo 'backupbot: error: one of the invoked features is not configured in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: one of the invoked features is not configured in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
 error_gpg_not_installed() {
-    echo 'backupbot: error: gpg is required but not installed'
-    echo 'backupbot: install gpg with "pkg install gnupg"'
+    printf 'backupbot: error: gpg is required but not installed\nbackupbot: install gpg with "pkg install gnupg"\n'
     exit 1
 }
 
 error_compression_not_configured() {
-    echo 'backupbot: error: compression is not configured properly in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: BACKUP_FILES_COMPRESSION is not configured properly in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
 error_daily_backup_not_configured() {
-    echo 'backupbot: error: AUTOMATIC_BACKUP_DAILY is not configured properly in /usr/local/etc/backupbot.conf'
+    printf 'backupbot: error: AUTOMATIC_BACKUP_DAILY is not configured properly in /usr/local/etc/backupbot.conf\n'
     exit 1
 }
 
@@ -242,7 +251,14 @@ requirement_argument_validity() {
     if ! [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -eq "${BACKUP_MYSQL_RETENTION_WEEKLY}" ] 2> /dev/null; then
         error_retention_not_integer
     fi
-    # compression feature number must be 0, 2, 3 or 4
+    # backup permissions must be a integer
+    if ! [ "${BACKUP_FILES_PERMISSIONS}" -eq "${BACKUP_FILES_PERMISSIONS}" ] 2> /dev/null; then
+        error_permissions_not_integer
+    fi
+    if ! [ "${BACKUP_MYSQL_PERMISSIONS}" -eq "${BACKUP_MYSQL_PERMISSIONS}" ] 2> /dev/null; then
+        error_permissions_not_integer
+    fi
+    # compression feature number must be 0, 1, 2 or 3
     if [ "${BACKUP_FILES_COMPRESSION}" != '0' ] && [ "${BACKUP_FILES_COMPRESSION}" != '1' ] && [ "${BACKUP_FILES_COMPRESSION}" != '2' ] && [ "${BACKUP_FILES_COMPRESSION}" != '3' ]; then
         error_compression_not_configured
     fi
@@ -296,54 +312,58 @@ requirement_prevent_backup_overlap() {
 ################################################################################
 
 option_version() {
-    echo "backupbot version ${BACKUPBOT_VERSION}"
-    echo "Copyright (C) 2019-2022 Nozel."
-    echo "License CC Attribution-NonCommercial-ShareAlike 4.0 Int."
-    echo
-    echo "Written by Sebas Veeke"
+    printf "backupbot version %s\n" "${BACKUPBOT_VERSION}"
+    printf "Copyright (C) 2019-2023 Nozel.\n"
+    printf "License CC Attribution-NonCommercial-ShareAlike 4.0 Int.\n\n"
+    printf "Written by Sebas Veeke\n"
 }
 
 option_help() {
-    echo "Usage:"
-    echo " backupbot [feature/option]..."
-    echo
-    echo "Features:"
-    echo " -b, --backup         Backup everything configured in configuration file"
-    echo " -f, --files          Backup files configured in configuration file"
-    echo " -m, --mysql          Backup MySQL databases configured in configuration file"
-    echo
-    echo "Options:"
-    echo " --cron               Effectuate cron changes from serverbot config"
-    echo " --help               Display this help and exit"
-    echo " --version            Display version information and exit"
+    printf "Usage:\n"
+    printf " backupbot [feature/option]...\n\n"
+    printf "Features:\n"
+    printf " -b, --backup         Backup everything configured in configuration file\n"
+    printf " -f, --files          Backup files configured in configuration file\n"
+    printf " -m, --mysql          Backup MySQL databases configured in configuration file\n\n"
+    printf "Options:\n"
+    printf " --cron               Effectuate cron changes from serverbot config\n"
+    printf " --help               Display this help and exit\n"
+    printf " --version            Display version information and exit\n"
 }
 
 option_cron() {
-    echo '[1] Removing old backupbot cronjob'
+    printf '[1] Removing old backupbot cronjob\n'
     rm -f /etc/cron.d/backupbot
     if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ]; then
         if [ "${AUTOMATIC_BACKUP_DAILY}" -ge 0 ] && [ "${AUTOMATIC_BACKUP_DAILY}" -le 23 ]; then
-        echo "[2] Adding daily scheduled backup on ${AUTOMATIC_BACKUP_DAILY}:00"
-        echo '# This cronjob activates backupbot daily on the chosen schedule' > /etc/cron.d/backupbot
-        echo "0 ${AUTOMATIC_BACKUP_DAILY} * * * root /usr/bin/backupbot --backup --daily" >> /etc/cron.d/backupbot
+        printf "[2] Adding daily scheduled backup on %s:00\n" "${AUTOMATIC_BACKUP_DAILY}"
+        printf "# This cronjob activates backupbot daily on the chosen schedule\n0 ${AUTOMATIC_BACKUP_DAILY} * * * root /usr/bin/backupbot --backup --daily\n\n" > /etc/cron.d/backupbot
         fi
         if [ "${AUTOMATIC_BACKUP_WEEKLY}" -ge 1 ] && [ "${AUTOMATIC_BACKUP_WEEKLY}" -le 7 ]; then
-        echo "[3] Adding weekly scheduled backup on day ${AUTOMATIC_BACKUP_WEEKLY}"
-        echo '' >> /etc/cron.d/backupbot
-        echo '# This cronjob activates backupbot weekly on the chosen schedule' >> /etc/cron.d/backupbot
-        echo "0 ${AUTOMATIC_BACKUP_DAILY} * * ${AUTOMATIC_BACKUP_WEEKLY} root /usr/bin/backupbot --backup --weekly" >> /etc/cron.d/backupbot
+        printf "[3] Adding weekly scheduled backup on day %s\n" "${AUTOMATIC_BACKUP_WEEKLY}"
+        printf "# This cronjob activates backupbot weekly on the chosen schedule\n0 ${AUTOMATIC_BACKUP_DAILY} * * ${AUTOMATIC_BACKUP_WEEKLY} root /usr/bin/backupbot --backup --weekly\n" >> /etc/cron.d/backupbot
         fi
-        echo
-        echo 'All done! Your new schedule can be found in /etc/cron.d/backupbot'
+        printf '\nAll done! Your new schedule can be found in /etc/cron.d/backupbot\n'
     else
-        echo 'Automatic backup is disabled, skipping creation of cronjob'
+        printf 'Automatic backup is disabled, skipping creation of cronjob\n'
     fi
 }
 
 send_notice_to_log() {
     DATE="$(date +%Y-%m-%d)"
     TIME="$(date +%H:%M:%S)"
-    printf "[%s][%s][NOTICE]%s %s %s\n" "${DATE}" "${TIME}" "${1}" "${2}" >> "${BACKUPBOT_LOG}"
+    printf "[%s][%s][NOTICE] %s %s\n" "${DATE}" "${TIME}" "${1}" "${2}" >> "${BACKUPBOT_LOG}"
+}
+
+random_delay() {
+    # create random delay for automated tasks between 0 and 3600 seconds when configured
+    if [ "${RANDOM_DELAY}" = 'YES' ]; then
+        if [ "${ARGUMENT_DAILY}" = '1' ] || [ "${ARGUMENT_WEEKLY}" = '1' ]; then
+            RANDOM_DELAY="$(jot -r 1 0 3600)"
+            send_notice_to_log "[DELAY]" "Add random delay of ${RANDOM_DELAY} seconds before backup starts"
+            sleep "${RANDOM_DELAY}"
+        fi
+    fi
 }
 
 ################################################################################
@@ -398,27 +418,31 @@ feature_files() {
         # check whether backup encryption is enabled
         if [ "${BACKUP_FILES_ENCRYPTION}" != 'NO' ]; then
             requirement_gpg
-            send_notice_to_log "[FILES]" "Starting encrypted file backup"
-            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_FILES_ENCRYPTION}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
-            send_notice_to_log "[FILES]" "Finished encrypted file backup"
+            send_notice_to_log "[FILES]" "Starting encrypted file backup for ${BACKUP_FILES}"
+            tar --create --preserve-permissions "${TAR_COMPRESSION_ARGUMENT}" --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_FILES_ENCRYPTION}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+            send_notice_to_log "[FILES]" "Finished encrypted file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
         else
-            send_notice_to_log "[FILES]" "Starting file backup"
-            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}" ${BACKUP_FILES}
-            send_notice_to_log "[FILES]" "Finished file backup"
+            send_notice_to_log "[FILES]" "Starting file backup for ${BACKUP_FILES}"
+            tar --create --preserve-permissions "${TAR_COMPRESSION_ARGUMENT}" --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}" ${BACKUP_FILES}
+            send_notice_to_log "[FILES]" "Finished file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}"
         fi
 
         # change ownership of file backups
         chown -R ${BACKUP_FILES_OWNER}:${BACKUP_FILES_GROUP} ${BACKUP_FILES_DESTINATION}/*-files.tar*
-        send_notice_to_log "[FILES]" "Updated ownership of file backups"
+        send_notice_to_log "[FILES]" "Updated ownership of file backups in ${BACKUP_FILES_DESTINATION} to ${BACKUP_FILES_OWNER}:${BACKUP_FILES_GROUP}"
+
+        # change permissions of file backups
+        chmod -R ${BACKUP_FILES_PERMISSIONS} ${BACKUP_FILES_DESTINATION}/*-files.tar*
+        send_notice_to_log "[FILES]" "Updated permissions of file backups in ${BACKUP_FILES_DESTINATION} to ${BACKUP_FILES_PERMISSIONS}"
 
         # delete backups older than file retention, unless it's zero (infinite)
         if [ "${BACKUP_FILES_RETENTION_DAILY}" -gt '0' ]; then
             find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION_DAILY}" -name '*-daily-files*' -delete
-            send_notice_to_log "[FILES]" "Removed daily file backups older than ${BACKUP_FILES_RETENTION_DAILY} days"
+            send_notice_to_log "[FILES]" "Removed daily file backups older than ${BACKUP_FILES_RETENTION_DAILY} days from ${BACKUP_FILES_DESTINATION}"
         fi
         if [ "${BACKUP_FILES_RETENTION_WEEKLY}" -gt '0' ]; then
             find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION_WEEKLY}" -name '*-weekly-files*' -delete
-            send_notice_to_log "[FILES]" "Removed weekly file backups older than ${BACKUP_FILES_RETENTION_WEEKLY} days"
+            send_notice_to_log "[FILES]" "Removed weekly file backups older than ${BACKUP_FILES_RETENTION_WEEKLY} days from ${BACKUP_FILES_DESTINATION}"
         fi
     fi
 }
@@ -456,29 +480,33 @@ feature_mysql() {
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
                 send_notice_to_log "[MYSQL]" "Starting encrypted backup for database ${DB}"
                 mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_MYSQL_ENCRYPTION}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
-                send_notice_to_log "[MYSQL]" "Created encrypted backup for database ${DB}"
+                send_notice_to_log "[MYSQL]" "Finished encrypted backup for database ${DB} to ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
             done
         else
             # create a list of all user created mysql databases and mysqldump them to their own file
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
                 send_notice_to_log "[MYSQL]" "Starting backup for database ${DB}"
                 mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}"
-                send_notice_to_log "[MYSQL]" "Created backup for database ${DB}"
+                send_notice_to_log "[MYSQL]" "Finished backup for database ${DB} to ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}"
             done
         fi
 
-        # change ownership of file backups
+        # change ownership of mysql backups
         chown -R ${BACKUP_MYSQL_OWNER}:${BACKUP_MYSQL_GROUP} ${BACKUP_MYSQL_DESTINATION}/*-mysql-*
-        send_notice_to_log "[MYSQL]" "Updated ownership of mysql backups"
+        send_notice_to_log "[MYSQL]" "Updated ownership of mysql backups in ${BACKUP_MYSQL_DESTINATION} to ${BACKUP_MYSQL_OWNER}:${BACKUP_MYSQL_GROUP}"
+
+        # change permissions of mysql backups
+        chmod -R ${BACKUP_MYSQL_PERMISSIONS} ${BACKUP_MYSQL_DESTINATION}/*-mysql-*
+        send_notice_to_log "[MYSQL]" "Updated permissions of mysql backups in ${BACKUP_MYSQL_DESTINATION} to ${BACKUP_MYSQL_PERMISSIONS}"
 
         # delete backups older than mysql retention, unless it's zero (infinite)
         if [ "${BACKUP_MYSQL_RETENTION_DAILY}" -gt '0' ]; then
             find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION_DAILY}" -name '*-daily-mysql*' -delete
-            send_notice_to_log "[MYSQL]" "Removed daily database backups older than ${BACKUP_MYSQL_RETENTION_DAILY} days"
+            send_notice_to_log "[MYSQL]" "Removed daily database backups older than ${BACKUP_MYSQL_RETENTION_DAILY} days from ${BACKUP_MYSQL_DESTINATION}"
         fi
         if [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -gt '0' ]; then
             find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION_WEEKLY}" -name '*-weekly-mysql*' -delete
-            send_notice_to_log "[MYSQL]" "Removed weekly database backups older than ${BACKUP_MYSQL_RETENTION_WEEKLY} days"
+            send_notice_to_log "[MYSQL]" "Removed weekly database backups older than ${BACKUP_MYSQL_RETENTION_WEEKLY} days from ${BACKUP_MYSQL_DESTINATION}"
         fi
     fi
 }
@@ -508,6 +536,7 @@ backupbot_main() {
         requirement_root
         requirement_os
         requirement_prevent_backup_overlap
+        random_delay
         feature_files
         feature_mysql
         exit 0
