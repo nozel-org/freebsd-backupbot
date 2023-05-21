@@ -22,16 +22,18 @@ drwxr-xr-x  4 root  wheel   1.0K Jun 29 23:52 ..
 ```
 
 ## How to install
-1. Copy `backupbot` to `/usr/bin/backupbot` (owner=`root`, group=`wheel`, permissions=`555` (read & execute).
+Use [botmanager](https://github.com/nozel-org/botmanager) or install manually:
+
+1. Copy `backupbot` to `/usr/local/bin/backupbot` (owner=`root`, group=`wheel`, permissions=`555` (read & execute).
 2. Copy `backupbot.conf` to `/usr/local/etc/backupbot.conf` and adjust the settings to taste.
 3. Optionally add the chosen schedule to a automatic cronjob with `backupbot --cron`.
 
 This will look something like:
 ```
 # install backupbot
-wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot -O /usr/bin/backupbot
-chown root:wheel /usr/bin/backupbot
-chmod 555 /usr/bin/backupbot
+wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot -O /usr/local/bin/backupbot
+chown root:wheel /usr/local/bin/backupbot
+chmod 555 /usr/local/bin/backupbot
 wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.conf -O /usr/local/etc/backupbot.conf
 nano /usr/local/etc/backupbot.conf
 backupbot --cron
@@ -41,6 +43,10 @@ backupbot --cron
 The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/MANUAL.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
 
 ## Changelog
+### 1.7.1-RELEASE (21-05-2023)
+- Fixed layout inconsistency in log format.
+- Fixed legacy reference to /usr/bin in option_cron.
+
 ### 1.7.0-RELEASE (18-12-2022)
 - Added configurable automatic permissions of backups.
 - Log entries are now more informational.
