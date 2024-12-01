@@ -1,73 +1,105 @@
 #!/bin/sh
 
 ################################################################################
-# Version 1.7.1-RELEASE (21-05-2023)
+# Version 1.8.0-RELEASE (01-12-2024)
 ################################################################################
 
-################################################################################
-# Copyright 2019-2023 Nozel/Sebas Veeke. Licenced under a Creative Commons
-# Attribution-NonCommercial-ShareAlike 4.0 International License.
+#############################################################################
+# SPDX-License-Identifier: Apache-2.0
 #
-# See https://creativecommons.org/licenses/by-nc-sa/4.0/
+# Copyright 2019 Sebas Veeke. All rights reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#############################################################################
+
+#############################################################################
 # Contact:
-# > e-mail      mail@nozel.org
-# > GitHub      onnozel
-################################################################################
+# > E-mail      mail@nozel.org
+# > Website     https://nozel.org
+# > Codeberg    https://codeberg.org/nozel/backupbot
+#############################################################################
 
 ################################################################################
-# VARIABLES
+# PROGRAM VARIABLES
 ################################################################################
 
-# serverbot version
-BACKUPBOT_VERSION='1.7.1'
+# backupbot version
+BACKUPBOT_VERSION='1.8.0'
+BACKUPBOT_VERSION_DATE='01-12-2024'
 
-# backupbot parameters can be configured in /usr/local/etc/backupbot.conf
-# if the backupbot configuration file exists, it gets sourced by backupbot
-if [ -f /usr/local/etc/backupbot.conf ]; then
+# file locations
+BACKUPBOT_CONFIGURATION='/usr/local/etc/backupbot.conf'
+BACKUPBOT_CRONFILE='/etc/cron.d/backupbot'
+
+#############################################################################
+# CONFIGURATION FILE HANDLING
+#############################################################################
+
+# check whether backupbot.conf is available and source it
+if [ -f "${BACKUPBOT_CONFIGURATION}" ]; then
     # populate all usable variables to have defaults and check validity later on
     BACKUPBOT_LOG='0'
-    RANDOM_DELAY='0'
-    AUTOMATIC_BACKUP_ENABLE='NO'
+    AUTOMATIC_BACKUP_ENABLE='0'
     AUTOMATIC_BACKUP_DAILY='0'
     AUTOMATIC_BACKUP_WEEKLY='0'
-    BACKUP_FILES_ENABLE='NO'
+    RANDOM_DELAY='0'
+    BACKUP_FILES_ENABLE='0'
     BACKUP_FILES_DESTINATION='0'
     BACKUP_FILES_RETENTION_DAILY='0'
     BACKUP_FILES_RETENTION_WEEKLY='0'
     BACKUP_FILES_COMPRESSION='0'
-    BACKUP_FILES_ENCRYPTION='NO'
+    BACKUP_FILES_ENCRYPTION='0'
+    BACKUP_FILES_SPLIT='0'
     BACKUP_FILES_OWNER='0' 
     BACKUP_FILES_GROUP='0'
     BACKUP_FILES_PERMISSIONS='0'
     BACKUP_FILES='0'
-    BACKUP_FILES_PREFIX="$(date +%y%m%dT%H%M%S)"
-    BACKUP_MYSQL_ENABLE='NO'
+    BACKUP_FILES_PREFIX='0'
+    BACKUP_MYSQL_ENABLE='0'
     BACKUP_MYSQL_DESTINATION='0'
     BACKUP_MYSQL_RETENTION_DAILY='0'
     BACKUP_MYSQL_RETENTION_WEEKLY='0'
     BACKUP_MYSQL_COMPRESSION='0'
-    BACKUP_MYSQL_ENCRYPTION='NO'
-    BACKUP_MYSQL_OWNER='root'
-    BACKUP_MYSQL_GROUP='wheel'
+    BACKUP_MYSQL_ENCRYPTION='0'
+    BACKUP_MYSQL_OWNER='0'
+    BACKUP_MYSQL_GROUP='0'
     BACKUP_MYSQL_PERMISSIONS='0'
-    BACKUP_MYSQL_PREFIX="$(date +%y%m%dT%H%M%S)"
-    ARGUMENT_VERSION='0'
-    ARGUMENT_HELP='0'
-    ARGUMENT_CRON='0'
-    ARGUMENT_BACKUP='0'
-    ARGUMENT_FILES='0'
-    ARGUMENT_MYSQL='0'
-    ARGUMENT_DAILY='0'
-    ARGUMENT_WEEKLY='0'
-    ARGUMENT_NONE='0'
+    BACKUP_MYSQL_PREFIX='0'
 
     # and source backupbot.conf
-    . /usr/local/etc/backupbot.conf
+    . "${BACKUPBOT_CONFIGURATION}"
 
-    # populate configuration options with defaults when not provided by user
+    # check whether backupbot.conf configuration parameters are used
+    # general settings
     if [ "${BACKUPBOT_LOG}" = '0' ]; then
         BACKUPBOT_LOG='/var/log/backupbot.log'
+    fi
+    # automatic backup settings
+    if [ "${AUTOMATIC_BACKUP_ENABLE}" = '0' ]; then
+        AUTOMATIC_BACKUP_ENABLE='NO'
+    fi
+    if [ "${RANDOM_DELAY}" = '0' ]; then
+        RANDOM_DELAY='NO'
+    fi
+    # feature backup settings
+    if [ "${BACKUP_FILES_ENABLE}" = '0' ]; then
+        BACKUP_FILES_ENABLE='NO'
+    fi
+    if [ "${BACKUP_FILES_ENCRYPTION}" = '0' ]; then
+        BACKUP_FILES_ENCRYPTION='NO'
+    fi
+    if [ "${BACKUP_FILES_SPLIT}" = '0' ]; then
+        BACKUP_FILES_SPLIT='NO'
     fi
     if [ "${BACKUP_FILES_OWNER}" = '0' ]; then
         BACKUP_FILES_OWNER='root'
@@ -78,6 +110,19 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
     if [ "${BACKUP_FILES_PERMISSIONS}" = '0' ]; then
         BACKUP_FILES_PERMISSIONS='640'
     fi
+    if [ "${BACKUP_FILES}" = '0' ]; then
+        BACKUP_FILES='0'
+    fi
+    if [ "${BACKUP_FILES_PREFIX}" = '0' ]; then
+        BACKUP_FILES_PREFIX="$(date +%y%m%dT%H%M%S)"
+    fi
+    # feature mysql settings
+    if [ "${BACKUP_MYSQL_ENABLE}" = '0' ]; then
+        BACKUP_MYSQL_ENABLE='NO'
+    fi
+    if [ "${BACKUP_MYSQL_ENCRYPTION}" = '0' ]; then
+        BACKUP_MYSQL_ENCRYPTION='NO'
+    fi
     if [ "${BACKUP_MYSQL_OWNER}" = '0' ]; then
         BACKUP_MYSQL_OWNER='root'
     fi
@@ -87,18 +132,32 @@ if [ -f /usr/local/etc/backupbot.conf ]; then
     if [ "${BACKUP_MYSQL_PERMISSIONS}" = '0' ]; then
         BACKUP_MYSQL_PERMISSIONS='640'
     fi
-
+    if [ "${BACKUP_MYSQL_PREFIX}" = '0' ]; then
+        BACKUP_MYSQL_PREFIX="$(date +%y%m%dT%H%M%S)"
+    fi
 else
     # if backupbot.conf does not exist, return this error 
-    printf 'backupbot: error: /usr/local/etc/backupbot.conf is required but cannot be found\n'
-    exit 1
+    printf "%s is required but cannot be found" "${BACKUPBOT_CONFIGURATION}"
 fi
 
-################################################################################
-# ARGUMENTS
-################################################################################
+####################################################################################################
+# ARGUMENT HANDLING
+####################################################################################################
 
-# enable arguments to backupbot
+# populate validation variables with zeros for validation
+ARGUMENT_VERSION='0'
+ARGUMENT_HELP='0'
+ARGUMENT_CRON='0'
+ARGUMENT_BACKUP='0'
+ARGUMENT_FILES='0'
+ARGUMENT_MYSQL='0'
+ARGUMENT_ZFS='0'
+ARGUMENT_HOURLY='0'
+ARGUMENT_DAILY='0'
+ARGUMENT_WEEKLY='0'
+ARGUMENT_NONE='0'
+
+# read arguments
 while test -n "$1"; do
     case "$1" in
         # options
@@ -133,7 +192,17 @@ while test -n "$1"; do
             shift
             ;;
 
+        --zfs|zfs|-z)
+            ARGUMENT_ZFS='1'
+            shift
+            ;;
+
         # other
+        --hourly)
+            ARGUMENT_HOURLY='1'
+            shift
+            ;;
+
         --daily)
             ARGUMENT_DAILY='1'
             shift
@@ -150,145 +219,108 @@ while test -n "$1"; do
     esac
 done
 
-################################################################################
-# ERROR FUNCTIONS
-################################################################################
+####################################################################################################
+# ERROR AND LOGGING FUNCTIONS
+####################################################################################################
 
-# requirement errors
-error_invalid_argument() {
-    printf 'backupbot: error: used argument is invalid, use "backuptbot --help" for proper usage\n'
-    exit 1
-}    
-
-error_no_root_privileges() {
-    printf 'backupbot: error: used argument must be run with root privileges\n'
+program_error() {
+    printf "backupbot: error: %s %s %s\n" "${1}" "${2}" "${3}"
     exit 1
 }
 
-error_os_not_supported() {
-    printf 'backupbot: operating system is not supported\n'
-    exit 1
+send_notice_to_customlog() {
+    DATE="$(date +%Y-%m-%d)"
+    TIME="$(date +%H:%M:%S)"
+    printf "[%s][%s][NOTICE]%s %s\n" "${DATE}" "${TIME}" "${1}" "${2}" >> "${BACKUPBOT_LOG}"
 }
 
-# configuration errors
-error_destination_not_configured() {
-    printf 'backupbot: error: BACKUP_*_DESTINATION is not configured properly in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_source_not_configured() {
-    printf 'backupbot: error: BACKUP_FILES is not configured properly in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_no_feature_configured() {
-    printf 'backupbot: error: no backup feature is enabled in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_retention_not_integer() {
-    printf 'backupbot: error: BACKUP_FILES_RETENTION_* should be a positive number in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_permissions_not_integer() {
-    printf 'backupbot: error: BACKUP_FILES_PERMISSIONS should be a valid unix file system permission (i.e. 640) in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_feature_not_configured() {
-    printf 'backupbot: error: one of the invoked features is not configured in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_gpg_not_installed() {
-    printf 'backupbot: error: gpg is required but not installed\nbackupbot: install gpg with "pkg install gnupg"\n'
-    exit 1
-}
-
-error_compression_not_configured() {
-    printf 'backupbot: error: BACKUP_FILES_COMPRESSION is not configured properly in /usr/local/etc/backupbot.conf\n'
-    exit 1
-}
-
-error_daily_backup_not_configured() {
-    printf 'backupbot: error: AUTOMATIC_BACKUP_DAILY is not configured properly in /usr/local/etc/backupbot.conf\n'
-    exit 1
+send_notice_to_logger() {
+    logger -t backupbot "${1}" "${2}"
 }
 
 ################################################################################
-# REQUIREMENT FUNCTIONS
+# REQUIREMENT AND VALIDATION FUNCTIONS
 ################################################################################
-
-requirement_argument_validity() {
-    # enabled backup features must have file destinations
-    if [ "${BACKUP_FILES_ENABLE}" = 'YES' ] && [ "${BACKUP_FILES_DESTINATION}" = '0' ]; then
-        error_destination_not_configured
-    fi
-    if [ "${BACKUP_MYSQL_ENABLE}" = 'YES' ] && [ "${BACKUP_MYSQL_DESTINATION}" = '0' ]; then
-        error_destination_not_configured
-    fi
-    # enabled backup features must have configured file sources
-    if [ "${BACKUP_FILES_ENABLE}" = 'YES' ] && [ "${BACKUP_FILES}" = '0' ]; then
-        error_source_not_configured
-    fi
-    # at least one backup feature must be enabled
-    if [ "${ARGUMENT_BACKUP}" = '1' ] || [ "${ARGUMENT_BACKUP}" = '1' ] || [ "${ARGUMENT_BACKUP}" = '1' ]; then
-        if [ "${BACKUP_FILES_ENABLE}" = 'NO' ] && [ "${BACKUP_MYSQL_ENABLE}" = 'NO' ]; then
-            error_no_feature_configured
-        fi
-    fi
-    # backup feature retention must be a integer
-    if ! [ "${BACKUP_FILES_RETENTION_DAILY}" -eq "${BACKUP_FILES_RETENTION_DAILY}" ] 2> /dev/null; then
-        error_retention_not_integer
-    fi
-    if ! [ "${BACKUP_FILES_RETENTION_WEEKLY}" -eq "${BACKUP_FILES_RETENTION_WEEKLY}" ] 2> /dev/null; then
-        error_retention_not_integer
-    fi
-    if ! [ "${BACKUP_MYSQL_RETENTION_DAILY}" -eq "${BACKUP_MYSQL_RETENTION_DAILY}" ] 2> /dev/null; then
-        error_retention_not_integer
-    fi
-    if ! [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -eq "${BACKUP_MYSQL_RETENTION_WEEKLY}" ] 2> /dev/null; then
-        error_retention_not_integer
-    fi
-    # backup permissions must be a integer
-    if ! [ "${BACKUP_FILES_PERMISSIONS}" -eq "${BACKUP_FILES_PERMISSIONS}" ] 2> /dev/null; then
-        error_permissions_not_integer
-    fi
-    if ! [ "${BACKUP_MYSQL_PERMISSIONS}" -eq "${BACKUP_MYSQL_PERMISSIONS}" ] 2> /dev/null; then
-        error_permissions_not_integer
-    fi
-    # compression number must be 0, 1, 2 or 3
-    if [ "${BACKUP_FILES_COMPRESSION}" != '0' ] && [ "${BACKUP_FILES_COMPRESSION}" != '1' ] && [ "${BACKUP_FILES_COMPRESSION}" != '2' ] && [ "${BACKUP_FILES_COMPRESSION}" != '3' ]; then
-        error_compression_not_configured
-    fi
-    if [ "${BACKUP_MYSQL_COMPRESSION}" != '0' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '1' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '2' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '3' ]; then
-        error_compression_not_configured
-    fi
-     # weekly and daily backup arguments can't be used at the same time
-    if [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
-        error_invalid_argument
-    fi
-}
 
 requirement_root() {
     # show error when backupbot isn't run with root privileges
     if [ "$(id -u)" -ne '0' ]; then
-        error_no_root_privileges
+        program_error 'this feature must be run with root privileges'
     fi
 }
 
 requirement_os() {
     # show error when freebsd-version cannot be found
     if [ ! "$(command -v freebsd-version)" ]; then
-        error_os_not_supported
+        program_error 'operating system is not supported'
     fi
 }
 
 requirement_gpg() {
     # show error when gpg cannot be found
     if [ ! "$(command -v gpg)" ]; then
-        error_gpg_not_installed
+        program_error 'gpg is required but not installed, install gpg with "pkg install gnupg"'
+    fi
+}
+
+requirement_argument_validity() {
+    # enabled backup features must have file destinations
+    if [ "${BACKUP_FILES_ENABLE}" = 'YES' ] && [ "${BACKUP_FILES_DESTINATION}" = '0' ]; then
+        program_error "BACKUP_*_DESTINATION is not configured properly in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    if [ "${BACKUP_MYSQL_ENABLE}" = 'YES' ] && [ "${BACKUP_MYSQL_DESTINATION}" = '0' ]; then
+        program_error "BACKUP_*_DESTINATION is not configured properly in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    # enabled backup features must have configured file sources
+    if [ "${BACKUP_FILES_ENABLE}" = 'YES' ] && [ "${BACKUP_FILES}" = '0' ]; then
+        program_error "BACKUP_FILES is not configured properly in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    # at least one backup feature must be enabled
+    if [ "${ARGUMENT_BACKUP}" = '1' ] || [ "${ARGUMENT_BACKUP}" = '1' ] || [ "${ARGUMENT_BACKUP}" = '1' ]; then
+        if [ "${BACKUP_FILES_ENABLE}" = 'NO' ] && [ "${BACKUP_MYSQL_ENABLE}" = 'NO' ]; then
+            program_error "no backup feature is enabled in ${BACKUPBOT_CONFIGURATION}"
+        fi
+    fi
+    # backup feature retention must be a integer
+    if ! [ "${BACKUP_FILES_RETENTION_DAILY}" -eq "${BACKUP_FILES_RETENTION_DAILY}" ] 2> /dev/null; then
+        program_error "BACKUP_FILES_RETENTION_* should be a positive number in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    if ! [ "${BACKUP_FILES_RETENTION_WEEKLY}" -eq "${BACKUP_FILES_RETENTION_WEEKLY}" ] 2> /dev/null; then
+        program_error "BACKUP_FILES_RETENTION_* should be a positive number in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    if ! [ "${BACKUP_MYSQL_RETENTION_DAILY}" -eq "${BACKUP_MYSQL_RETENTION_DAILY}" ] 2> /dev/null; then
+        program_error "BACKUP_FILES_RETENTION_* should be a positive number in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    if ! [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -eq "${BACKUP_MYSQL_RETENTION_WEEKLY}" ] 2> /dev/null; then
+        program_error "BACKUP_FILES_RETENTION_* should be a positive number in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    # backup permissions must be a integer
+    if ! [ "${BACKUP_FILES_PERMISSIONS}" -eq "${BACKUP_FILES_PERMISSIONS}" ] 2> /dev/null; then
+        program_error "BACKUP_FILES_PERMISSIONS should be a valid unix file system permission (i.e. 640) in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    if ! [ "${BACKUP_MYSQL_PERMISSIONS}" -eq "${BACKUP_MYSQL_PERMISSIONS}" ] 2> /dev/null; then
+        program_error "BACKUP_FILES_PERMISSIONS should be a valid unix file system permission (i.e. 640) in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    # compression number must be 0, 1, 2 or 3
+    if [ "${BACKUP_FILES_COMPRESSION}" != '0' ] && [ "${BACKUP_FILES_COMPRESSION}" != '1' ] && \
+    [ "${BACKUP_FILES_COMPRESSION}" != '2' ] && [ "${BACKUP_FILES_COMPRESSION}" != '3' ] && \
+    [ "${BACKUP_FILES_COMPRESSION}" != '4' ] && [ "${BACKUP_FILES_COMPRESSION}" != '5' ] && \
+    [ "${BACKUP_FILES_COMPRESSION}" != '6' ] && [ "${BACKUP_FILES_COMPRESSION}" != '7' ] && \
+    [ "${BACKUP_FILES_COMPRESSION}" != '8' ] && [ "${BACKUP_FILES_COMPRESSION}" != '101' ] && \
+    [ "${BACKUP_FILES_COMPRESSION}" != '102' ] && [ "${BACKUP_FILES_COMPRESSION}" != '107' ]; then    
+        program_error "BACKUP_FILES_COMPRESSION is not configured properly in ${BACKUPBOT_CONFIGURATION}"
+    fi
+    if [ "${BACKUP_MYSQL_COMPRESSION}" != '0' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '1' ] && \
+    [ "${BACKUP_MYSQL_COMPRESSION}" != '2' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '3' ] && \
+    [ "${BACKUP_MYSQL_COMPRESSION}" != '4' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '5' ] && \
+    [ "${BACKUP_MYSQL_COMPRESSION}" != '6' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '7' ] && \
+    [ "${BACKUP_MYSQL_COMPRESSION}" != '8' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '101' ] && \
+    [ "${BACKUP_MYSQL_COMPRESSION}" != '102' ] && [ "${BACKUP_MYSQL_COMPRESSION}" != '107' ]; then
+        program_error "BACKUP_MYSQL_COMPRESSION is not configured properly in ${BACKUPBOT_CONFIGURATION}"
+    fi
+     # weekly and daily backup arguments can't be used at the same time
+    if [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
+        program_error 'invalid argument used'
     fi
 }
 
@@ -312,47 +344,51 @@ requirement_prevent_backup_overlap() {
 ################################################################################
 
 option_version() {
-    printf "backupbot version %s\n" "${BACKUPBOT_VERSION}"
-    printf "Copyright (C) 2019-2023 Nozel.\n"
-    printf "License CC Attribution-NonCommercial-ShareAlike 4.0 Int.\n\n"
-    printf "Written by Sebas Veeke\n"
+    printf "Backupbot %s (%s)\n" "${BACKUPBOT_VERSION}" "${BACKUPBOT_VERSION_DATE}"
+    printf "Copyright (C) 2019 Sebas Veeke. All rights reserved.\n"
+    printf "SPDX-License-Identifier: Apache-2.0.\n"
 }
 
 option_help() {
     printf "Usage:\n"
-    printf " backupbot [feature/option]...\n\n"
+    printf "  backupbot [feature/option]...\n\n"
     printf "Features:\n"
-    printf " -b, --backup         Backup everything configured in configuration file\n"
-    printf " -f, --files          Backup files configured in configuration file\n"
-    printf " -m, --mysql          Backup MySQL databases configured in configuration file\n\n"
+    printf "  -b, --backup         Backup everything configured in configuration file\n"
+    printf "  -f, --files          Backup files configured in configuration file\n"
+    printf "  -m, --mysql          Backup MySQL databases configured in configuration file\n\n"
     printf "Options:\n"
-    printf " --cron               Effectuate cron changes from serverbot config\n"
-    printf " --help               Display this help and exit\n"
-    printf " --version            Display version information and exit\n"
+    printf "  --cron               Effectuate cron changes from backupbot config\n"
+    printf "  --help               Display this help and exit\n"
+    printf "  --version            Display version information and exit\n"
 }
 
 option_cron() {
     printf '[1] Removing old backupbot cronjob\n'
-    rm -f /etc/cron.d/backupbot
+    rm -f "${BACKUPBOT_CRONFILE}"
     if [ "${AUTOMATIC_BACKUP_ENABLE}" = 'YES' ]; then
         if [ "${AUTOMATIC_BACKUP_DAILY}" -ge 0 ] && [ "${AUTOMATIC_BACKUP_DAILY}" -le 23 ]; then
         printf "[2] Adding daily scheduled backup on %s:00\n" "${AUTOMATIC_BACKUP_DAILY}"
-        printf "# This cronjob activates backupbot daily on the chosen schedule\n0 ${AUTOMATIC_BACKUP_DAILY} * * * root /usr/local/bin/backupbot --backup --daily\n\n" > /etc/cron.d/backupbot
+        printf "# This cronjob activates backupbot daily on the chosen schedule\n0 %s * * * root /usr/local/bin/backupbot --backup --daily\n\n" "${AUTOMATIC_BACKUP_DAILY}" > "${BACKUPBOT_CRONFILE}"
         fi
         if [ "${AUTOMATIC_BACKUP_WEEKLY}" -ge 1 ] && [ "${AUTOMATIC_BACKUP_WEEKLY}" -le 7 ]; then
         printf "[3] Adding weekly scheduled backup on day %s\n" "${AUTOMATIC_BACKUP_WEEKLY}"
-        printf "# This cronjob activates backupbot weekly on the chosen schedule\n0 ${AUTOMATIC_BACKUP_DAILY} * * ${AUTOMATIC_BACKUP_WEEKLY} root /usr/local/bin/backupbot --backup --weekly\n" >> /etc/cron.d/backupbot
+        printf "# This cronjob activates backupbot weekly on the chosen schedule\n0 %s * * %s root /usr/local/bin/backupbot --backup --weekly\n" "${AUTOMATIC_BACKUP_DAILY}" "${AUTOMATIC_BACKUP_WEEKLY}" >> "${BACKUPBOT_CRONFILE}"
         fi
-        printf '\nAll done! Your new schedule can be found in /etc/cron.d/backupbot\n'
+        printf "\nAll done! Your new schedule can be found in %s\n" "${BACKUPBOT_CRONFILE}"
+        send_notice_to_logger "[CRON]" "Effectuated cron configuration from ${BACKUPBOT_CONFIGURATION} to ${BACKUPBOT_CRONFILE}"
     else
         printf 'Automatic backup is disabled, skipping creation of cronjob\n'
     fi
 }
 
-send_notice_to_log() {
+send_notice_to_customlog() {
     DATE="$(date +%Y-%m-%d)"
     TIME="$(date +%H:%M:%S)"
     printf "[%s][%s][NOTICE]%s %s\n" "${DATE}" "${TIME}" "${1}" "${2}" >> "${BACKUPBOT_LOG}"
+}
+
+send_notice_to_logger() {
+    logger -t backupbot "${1}" "${2}"
 }
 
 random_delay() {
@@ -360,7 +396,7 @@ random_delay() {
     if [ "${RANDOM_DELAY}" = 'YES' ]; then
         if [ "${ARGUMENT_DAILY}" = '1' ] || [ "${ARGUMENT_WEEKLY}" = '1' ]; then
             RANDOM_DELAY="$(jot -r 1 0 3600)"
-            send_notice_to_log "[DELAY]" "Add random delay of ${RANDOM_DELAY} seconds before backup starts"
+            send_notice_to_logger "[DELAY]" "Add random delay of ${RANDOM_DELAY} seconds before backup starts"
             sleep "${RANDOM_DELAY}"
         fi
     fi
@@ -371,23 +407,31 @@ random_delay() {
 ################################################################################
 
 # the following settings are used for tar:
-# --create               (-c) create new archive containing the specified items
-# --preserve-permissions (-p) preserve file permissions
-# --gzip                 (-z) compress the resulting archive with gunzip
-# --bzip2                (-j) compress the resulting archive with bzip2
-# --xz                   (-J) compress the resulting archive with xz
-# --file -               (-f) pipe the archive to next command
-# --verbose              (-v) produce verbose output (disabled by default)
+# --create                                (-c) create new archive containing the specified items
+# --preserve-permissions                  (-p) preserve file permissions
+# --use-compress-program=gzip   (--gzip)  (-z) compress the resulting archive with gzip                             1
+# --use-compress-program=bzip2  (--bzip2) (-j) compress the resulting archive with bzip2                            2
+# --use-compress-program=xz     (--xz)    (-J) compress the resulting archive with xz                               3
+# --use-compress-program=lz4    (--lz4)        compress the resulting archive with lz4                              4
+# --use-compress-program=zstd   (--zstd)       compress the resulting archice with zstd                             5
+# --use-compress-program=lrzip  (--lrzip)      compress the resulting archice with lrzip  (needs package installed) 6
+# --use-compress-program=lzip                  compress the resulting archive with lzip   (needs package installed) 7
+# --use-compress-program=lzop                  compress the resulting archive with lzop   (needs package installed) 8
+# --use-compress-program=pigz                  compress the resulting archive with pigz   (needs package installed) 101
+# --use-compress-program=pbzip2                compress the resulting archive with pbzip2 (needs package installed) 102
+# --use-compress-program=plzip                 compress the resulting archive with plzip  (needs package installed) 107
+# --file -                                (-f) pipe the archive to next command
+# --verbose                               (-v) produce verbose output (disabled by default)
 
 # the following settings are used for gpg:
-# --symmetric            (-c) use symmetric cipher for encryption
-# --cipher-algo AES256        use AES256 as cipher algorithm
-# --batch                     non-interactive mode
-# --passphrase                use password provided in backupbot.conf
-# --output               (-o) write output to file
+# --symmetric                             (-c) use symmetric cipher for encryption
+# --cipher-algo AES256                         use AES256 as cipher algorithm
+# --batch                                      non-interactive mode
+# --passphrase                                 use password provided in backupbot.conf
+# --output                                (-o) write output to file
 
 # the following settings are used for mysqldump
-# --single-transaction        dumps all tables in a single transaction
+# --single-transaction                         dumps all tables in a single transaction
 
 feature_files() {
     if [ "${BACKUP_FILES_ENABLE}" = 'YES' ]; then
@@ -405,44 +449,92 @@ feature_files() {
             TAR_COMPRESSION_ARGUMENT=''
             BACKUP_FILES_EXTENSION='tar'
         elif [ "${BACKUP_FILES_COMPRESSION}" = '1' ]; then
-            TAR_COMPRESSION_ARGUMENT='--gzip'
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=gzip'
             BACKUP_FILES_EXTENSION='tar.gz'
         elif [ "${BACKUP_FILES_COMPRESSION}" = '2' ]; then
-            TAR_COMPRESSION_ARGUMENT='--bzip2'
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=bzip2'
             BACKUP_FILES_EXTENSION='tar.bz2'
         elif [ "${BACKUP_FILES_COMPRESSION}" = '3' ]; then
-            TAR_COMPRESSION_ARGUMENT='--xz'
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=xz'
             BACKUP_FILES_EXTENSION='tar.xz'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '4' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=lz4'
+            BACKUP_FILES_EXTENSION='tar.lz4'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '5' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=zstd'
+            BACKUP_FILES_EXTENSION='tar.zst'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '6' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=lrzip'
+            BACKUP_FILES_EXTENSION='tar.lrz'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '7' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=lzip'
+            BACKUP_FILES_EXTENSION='tar.lz'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '8' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=lzop'
+            BACKUP_FILES_EXTENSION='tar.lzo'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '101' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=pigz'
+            BACKUP_FILES_EXTENSION='tar.gz'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '102' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=pbzip2'
+            BACKUP_FILES_EXTENSION='tar.bz2'
+        elif [ "${BACKUP_FILES_COMPRESSION}" = '107' ]; then
+            TAR_COMPRESSION_ARGUMENT='--use-compress-program=plzip'
+            BACKUP_FILES_EXTENSION='tar.lz'
         fi
 
-        # check whether backup encryption is enabled
-        if [ "${BACKUP_FILES_ENCRYPTION}" != 'NO' ]; then
+        # check configured backup splitting and create variables for arguments
+        if [ "${BACKUP_FILES_SPLIT}" != 'NO' ]; then
+            if [ "${BACKUP_FILES_SPLIT}" -ge '1' ] && [ "${BACKUP_FILES_SPLIT}" -le '10000000' ]; then
+                SPLIT_ARGUMENT="-d -b${BACKUP_FILES_SPLIT}G"
+            else
+                SPLIT_ARGUMENT=''
+                BACKUP_FILES_SPLIT='NO'
+                send_notice_to_logger "[FILES]" "[Unsupported value used for BACKUP_FILES_SPLIT, splitting will be disabled]"
+                program_error 'invalid value used for BACKUP_FILES_SPLIT'
+            fi
+        fi
+
+        # encryption + splitting
+        if [ "${BACKUP_FILES_ENCRYPTION}" != 'NO' ] && [ "${BACKUP_FILES_SPLIT}" != 'NO' ]; then
             requirement_gpg
-            send_notice_to_log "[FILES]" "Starting encrypted file backup for ${BACKUP_FILES}"
-            tar --create --preserve-permissions "${TAR_COMPRESSION_ARGUMENT}" --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_FILES_ENCRYPTION}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
-            send_notice_to_log "[FILES]" "Finished encrypted file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+            send_notice_to_logger "[FILES]" "Starting encrypted file backup for ${BACKUP_FILES}"
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_FILES_ENCRYPTION}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+            send_notice_to_logger "[FILES]" "Finished encrypted file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+        # encryption only
+        elif [ "${BACKUP_FILES_ENCRYPTION}" != 'NO' ] && [ "${BACKUP_FILES_SPLIT}" = 'NO' ]; then
+            requirement_gpg
+            send_notice_to_logger "[FILES]" "Starting encrypted file backup for ${BACKUP_FILES}"
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_FILES_ENCRYPTION}" > "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+            send_notice_to_logger "[FILES]" "Finished encrypted file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.gpg"
+        # splitting only
+        elif [ "${BACKUP_FILES_ENCRYPTION}" = 'NO' ] && [ "${BACKUP_FILES_SPLIT}" != 'NO' ]; then
+            send_notice_to_logger "[FILES]" "Starting file backup for ${BACKUP_FILES}"
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file - ${BACKUP_FILES} | split ${SPLIT_ARGUMENT} - "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}.part"
+            send_notice_to_logger "[FILES]" "Finished file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}"
+        # no encryption and splitting
         else
-            send_notice_to_log "[FILES]" "Starting file backup for ${BACKUP_FILES}"
-            tar --create --preserve-permissions "${TAR_COMPRESSION_ARGUMENT}" --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}" ${BACKUP_FILES}
-            send_notice_to_log "[FILES]" "Finished file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}"
+            send_notice_to_logger "[FILES]" "Starting file backup for ${BACKUP_FILES}"
+            tar --create --preserve-permissions ${TAR_COMPRESSION_ARGUMENT} --file "${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}" ${BACKUP_FILES}
+            send_notice_to_logger "[FILES]" "Finished file backup to ${BACKUP_FILES_DESTINATION}/${BACKUP_FILES_PREFIX}-${BACKUP_FILES_SUFFIX}.${BACKUP_FILES_EXTENSION}"
         fi
 
         # change ownership of file backups
-        chown -R ${BACKUP_FILES_OWNER}:${BACKUP_FILES_GROUP} ${BACKUP_FILES_DESTINATION}/*-files.tar*
-        send_notice_to_log "[FILES]" "Updated ownership of file backups in ${BACKUP_FILES_DESTINATION} to ${BACKUP_FILES_OWNER}:${BACKUP_FILES_GROUP}"
+        chown -R "${BACKUP_FILES_OWNER}":"${BACKUP_FILES_GROUP}" "${BACKUP_FILES_DESTINATION}"/*-files.tar*
+        send_notice_to_logger "[FILES]" "Updated ownership of file backups in ${BACKUP_FILES_DESTINATION} to ${BACKUP_FILES_OWNER}:${BACKUP_FILES_GROUP}"
 
         # change permissions of file backups
-        chmod -R ${BACKUP_FILES_PERMISSIONS} ${BACKUP_FILES_DESTINATION}/*-files.tar*
-        send_notice_to_log "[FILES]" "Updated permissions of file backups in ${BACKUP_FILES_DESTINATION} to ${BACKUP_FILES_PERMISSIONS}"
+        chmod -R "${BACKUP_FILES_PERMISSIONS}" "${BACKUP_FILES_DESTINATION}"/*-files.tar*
+        send_notice_to_logger "[FILES]" "Updated permissions of file backups in ${BACKUP_FILES_DESTINATION} to ${BACKUP_FILES_PERMISSIONS}"
 
         # delete backups older than file retention, unless it's zero (infinite)
         if [ "${BACKUP_FILES_RETENTION_DAILY}" -gt '0' ]; then
             find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION_DAILY}" -name '*-daily-files*' -delete
-            send_notice_to_log "[FILES]" "Removed daily file backups older than ${BACKUP_FILES_RETENTION_DAILY} days from ${BACKUP_FILES_DESTINATION}"
+            send_notice_to_logger "[FILES]" "Removed daily file backups older than ${BACKUP_FILES_RETENTION_DAILY} days from ${BACKUP_FILES_DESTINATION}"
         fi
         if [ "${BACKUP_FILES_RETENTION_WEEKLY}" -gt '0' ]; then
             find "${BACKUP_FILES_DESTINATION}/" -type f -mtime +"${BACKUP_FILES_RETENTION_WEEKLY}" -name '*-weekly-files*' -delete
-            send_notice_to_log "[FILES]" "Removed weekly file backups older than ${BACKUP_FILES_RETENTION_WEEKLY} days from ${BACKUP_FILES_DESTINATION}"
+            send_notice_to_logger "[FILES]" "Removed weekly file backups older than ${BACKUP_FILES_RETENTION_WEEKLY} days from ${BACKUP_FILES_DESTINATION}"
         fi
     fi
 }
@@ -460,17 +552,41 @@ feature_mysql() {
 
         # check configured backup compression and create variables for arguments and file extension
         if [ "${BACKUP_MYSQL_COMPRESSION}" = '0' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='cat'
-            BACKUP_MYSQL_EXTENSION='sql'
+            MYSQL_COMPRESSION_ARGUMENT=''
+            BACKUP_MYSQL_EXTENSION='tar'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '1' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='gzip'
-            BACKUP_MYSQL_EXTENSION='sql.gz'
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=gzip'
+            BACKUP_MYSQL_EXTENSION='tar.gz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '2' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='bzip2'
-            BACKUP_MYSQL_EXTENSION='sql.bz2'
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=bzip2'
+            BACKUP_MYSQL_EXTENSION='tar.bz2'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '3' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='xz'
-            BACKUP_MYSQL_EXTENSION='sql.xz'
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=xz'
+            BACKUP_MYSQL_EXTENSION='tar.xz'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '4' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lz4'
+            BACKUP_MYSQL_EXTENSION='tar.lz4'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '5' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=zstd'
+            BACKUP_MYSQL_EXTENSION='tar.zst'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '6' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lrzip'
+            BACKUP_MYSQL_EXTENSION='tar.lrz'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '7' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lzip'
+            BACKUP_MYSQL_EXTENSION='tar.lz'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '8' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lzop'
+            BACKUP_MYSQL_EXTENSION='tar.lzo'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '101' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=pigz'
+            BACKUP_MYSQL_EXTENSION='tar.gz'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '102' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=pbzip2'
+            BACKUP_MYSQL_EXTENSION='tar.bz2'
+        elif [ "${BACKUP_MYSQL_COMPRESSION}" = '107' ]; then
+            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=plzip'
+            BACKUP_MYSQL_EXTENSION='tar.lz'
         fi
 
         # check whether backup encryption is enabled
@@ -478,42 +594,58 @@ feature_mysql() {
             requirement_gpg
             # create a list of all user created mysql databases and mysqldump them to their own file
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
-                send_notice_to_log "[MYSQL]" "Starting encrypted backup for database ${DB}"
+                send_notice_to_logger "[MYSQL]" "Starting encrypted backup for database ${DB}"
                 mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} | gpg --symmetric --cipher-algo AES256 --batch --passphrase "${BACKUP_MYSQL_ENCRYPTION}" > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
-                send_notice_to_log "[MYSQL]" "Finished encrypted backup for database ${DB} to ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
+                send_notice_to_logger "[MYSQL]" "Finished encrypted backup for database ${DB} to ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}.gpg"
             done
         else
             # create a list of all user created mysql databases and mysqldump them to their own file
             for DB in $(mysql -e 'show databases' -s --skip-column-names | sed '/performance_schema/d' | sed '/information_schema/d' | sed '/mysql/d'); do
-                send_notice_to_log "[MYSQL]" "Starting backup for database ${DB}"
+                send_notice_to_logger "[MYSQL]" "Starting backup for database ${DB}"
                 mysqldump --single-transaction "${DB}" | ${MYSQL_COMPRESSION_ARGUMENT} > "${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}"
-                send_notice_to_log "[MYSQL]" "Finished backup for database ${DB} to ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}"
+                send_notice_to_logger "[MYSQL]" "Finished backup for database ${DB} to ${BACKUP_MYSQL_DESTINATION}/${BACKUP_MYSQL_PREFIX}-${BACKUP_MYSQL_SUFFIX}-${DB}.${BACKUP_MYSQL_EXTENSION}"
             done
         fi
 
         # change ownership of mysql backups
-        chown -R ${BACKUP_MYSQL_OWNER}:${BACKUP_MYSQL_GROUP} ${BACKUP_MYSQL_DESTINATION}/*-mysql-*
-        send_notice_to_log "[MYSQL]" "Updated ownership of mysql backups in ${BACKUP_MYSQL_DESTINATION} to ${BACKUP_MYSQL_OWNER}:${BACKUP_MYSQL_GROUP}"
+        chown -R "${BACKUP_MYSQL_OWNER}":"${BACKUP_MYSQL_GROUP}" "${BACKUP_MYSQL_DESTINATION}"/*-mysql-*
+        send_notice_to_logger "[MYSQL]" "Updated ownership of mysql backups in ${BACKUP_MYSQL_DESTINATION} to ${BACKUP_MYSQL_OWNER}:${BACKUP_MYSQL_GROUP}"
 
         # change permissions of mysql backups
-        chmod -R ${BACKUP_MYSQL_PERMISSIONS} ${BACKUP_MYSQL_DESTINATION}/*-mysql-*
-        send_notice_to_log "[MYSQL]" "Updated permissions of mysql backups in ${BACKUP_MYSQL_DESTINATION} to ${BACKUP_MYSQL_PERMISSIONS}"
+        chmod -R "${BACKUP_MYSQL_PERMISSIONS}" "${BACKUP_MYSQL_DESTINATION}"/*-mysql-*
+        send_notice_to_logger "[MYSQL]" "Updated permissions of mysql backups in ${BACKUP_MYSQL_DESTINATION} to ${BACKUP_MYSQL_PERMISSIONS}"
 
         # delete backups older than mysql retention, unless it's zero (infinite)
         if [ "${BACKUP_MYSQL_RETENTION_DAILY}" -gt '0' ]; then
             find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION_DAILY}" -name '*-daily-mysql*' -delete
-            send_notice_to_log "[MYSQL]" "Removed daily database backups older than ${BACKUP_MYSQL_RETENTION_DAILY} days from ${BACKUP_MYSQL_DESTINATION}"
+            send_notice_to_logger "[MYSQL]" "Removed daily database backups older than ${BACKUP_MYSQL_RETENTION_DAILY} days from ${BACKUP_MYSQL_DESTINATION}"
         fi
         if [ "${BACKUP_MYSQL_RETENTION_WEEKLY}" -gt '0' ]; then
             find "${BACKUP_MYSQL_DESTINATION}/" -type f -mtime +"${BACKUP_MYSQL_RETENTION_WEEKLY}" -name '*-weekly-mysql*' -delete
-            send_notice_to_log "[MYSQL]" "Removed weekly database backups older than ${BACKUP_MYSQL_RETENTION_WEEKLY} days from ${BACKUP_MYSQL_DESTINATION}"
+            send_notice_to_logger "[MYSQL]" "Removed weekly database backups older than ${BACKUP_MYSQL_RETENTION_WEEKLY} days from ${BACKUP_MYSQL_DESTINATION}"
         fi
     fi
 }
 
-################################################################################
-# MAIN FUNCTION
-################################################################################
+feature_zfs() {
+    if [ "${BACKUP_ZFS_ENABLE}" = 'YES' ]; then
+        if [ "${ARGUMENT_HOURLY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            echo 'wip'
+        # change file name depending on whether its a manual, daily or weekly backup
+        fi
+        if [ "${ARGUMENT_DAILY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            BACKUP_FILES_SUFFIX='files'
+        elif [ "${ARGUMENT_DAILY}" = '1' ] && [ "${ARGUMENT_WEEKLY}" = '0' ]; then
+            BACKUP_FILES_SUFFIX='daily-files'
+        elif [ "${ARGUMENT_DAILY}" = '0' ] && [ "${ARGUMENT_WEEKLY}" = '1' ]; then
+            BACKUP_FILES_SUFFIX='weekly-files'
+        fi
+    fi
+}
+
+####################################################################################################
+# MAIN FUNCTIONS
+####################################################################################################
 
 backupbot_main() {
     # check whether requirements are met
@@ -550,11 +682,19 @@ backupbot_main() {
         requirement_os
         feature_mysql
         exit 0
+    elif [ "${ARGUMENT_ZFS}" = '1' ]; then
+        requirement_root
+        requirement_os
+        feature_zfs
+        exit 0
     # return error on invalid argument
     elif [ "${ARGUMENT_NONE}" = '1' ]; then
-        error_invalid_argument
+        program_error 'used argument is invalid, use "backuptbot --help" for proper usage'
     fi
 }
 
-# call main function
+####################################################################################################
+# CALL MAIN FUNCTIONS
+####################################################################################################
+
 backupbot_main
