@@ -3,7 +3,7 @@
 
 ## Features
 * **Easy to use**: get started in just a couple of minutes.
-* **Backup files and mysql databases**: daily and weekly backups with optional compression and encryption.
+* **Backup files and mysql databases**: daily and weekly backups with optional compression, splitting and encryption.
 * **Configurable settings**: customize your backups, ownership, permissions, retention, schedule and random delay.
 * **Made for FreeBSD**: compatible with basic shell.
 
@@ -22,7 +22,7 @@ drwxr-xr-x  4 root  wheel   1.0K Jun 29 23:52 ..
 ```
 
 ## How to install
-Use [botmanager](https://github.com/nozel-org/botmanager) or install manually:
+Use [botmanager](https://codeberg.org/nozel/botmanager) or install manually:
 
 1. Copy `backupbot` to `/usr/local/bin/backupbot` (owner=`root`, group=`wheel`, permissions=`555` (read & execute).
 2. Copy `backupbot.conf` to `/usr/local/etc/backupbot.conf` and adjust the settings to taste.
@@ -31,18 +31,36 @@ Use [botmanager](https://github.com/nozel-org/botmanager) or install manually:
 This will look something like:
 ```
 # install backupbot
-wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot -O /usr/local/bin/backupbot
+wget https://codeberg.org/nozel/backupbot/raw/branch/master/backupbot -O /usr/local/bin/backupbot
 chown root:wheel /usr/local/bin/backupbot
 chmod 555 /usr/local/bin/backupbot
-wget https://raw.githubusercontent.com/nozel-org/freebsd-backupbot/master/backupbot.conf -O /usr/local/etc/backupbot.conf
+wget https://codeberg.org/nozel/backupbot/src/branch/master/backupbot.conf -O /usr/local/etc/backupbot.conf
 nano /usr/local/etc/backupbot.conf
 backupbot --cron
 ```
 
 ## Support
-The [manual](https://github.com/nozel-org/freebsd-backupbot/blob/master/MANUAL.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues and Discussions.
+The [manual](https://codeberg.org/nozel/backupbot/src/branch/master/MANUAL.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues.
 
 ## Changelog
+### 1.8.0-RELEASE (01-12-2024)
+- Fixed general styling issues and typos.
+- Made cron file location configurable #30.
+- Refactored error messages to a general error function #32.
+- Removed old references to serverbot #31.
+- Added support for logger #34.
+- Made preparations for custom log file support #38.
+- Made preparations for zfs snapshot support #28.
+- Added support for the lz4 compression algorithm via lz4 #36.
+- Added support for the Zstandard compression algorithm via zstd #36.
+- Added support for the LZMA compression algorithm via lrzip #36. This requires the package lrzip to be installed.
+- Added support for the LZMA compression algorithm via lzip #36. This requires the package lzip to be installed.
+- Added support for the LZO compression algorithm via lzop #36. This requires the package lzop to be installed.
+- Added support for the gzip compression algorithm via pigz (parallel) #36. This requires the package pigz to be installed.
+- Added support for the bzip2 compression algorithm via pbzip2 (parallel) #36. This requires the package pbzip2 to be installed.
+- Added support for the LZMA compression algorithm via plzip (parallel) #36. This requires the package plzip to be installed.
+- Added an option to automatically split file backups in to smaller parts #37.
+
 ### 1.7.1-RELEASE (21-05-2023)
 - Fixed layout inconsistency in log format.
 - Fixed legacy reference to /usr/bin in option_cron.
