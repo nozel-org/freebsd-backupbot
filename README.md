@@ -1,13 +1,16 @@
 # backupbot
+
 `backupbot` is a easy to use tool for creating (automatic) backups on FreeBSD. Currently files and mysql databases are supported, but more features can be added in the future.
 
 ## Features
+
 * **Easy to use**: get started in just a couple of minutes.
 * **Backup files and mysql databases**: daily and weekly backups with optional compression, splitting and encryption.
 * **Configurable settings**: customize your backups, ownership, permissions, retention, schedule and random delay.
 * **Made for FreeBSD**: compatible with basic shell.
 
 ## How to use
+
 It's quite easy! Adjust the settings of `/usr/local/etc/backupbot.conf` to taste and run `backupbot --backup` to start the backup process. To effectuate the chosen schedule for automatic backups, use `backupbot --cron` and `backupbot` will take care of the rest.
 
 If both `mysql` and `files` features have been enabled, the output of the backup will look something like this:
@@ -22,6 +25,7 @@ drwxr-xr-x  4 root  wheel   1.0K Jun 29 23:52 ..
 ```
 
 ## How to install
+
 Use [botmanager](https://codeberg.org/nozel/botmanager) or install manually:
 
 1. Copy `backupbot` to `/usr/local/bin/backupbot` (owner=`root`, group=`wheel`, permissions=`555` (read & execute).
@@ -40,10 +44,17 @@ backupbot --cron
 ```
 
 ## Support
+
 The [manual](https://codeberg.org/nozel/backupbot/src/branch/master/MANUAL.md) provides some more insight in to backupbot. If you have questions, suggestion or find bugs, please let us know via Issues.
 
 ## Changelog
+
+### 1.8.1-RELEASE (06-12-2024)
+
+- Fixed a bug with compression in feature MySQL #40.
+
 ### 1.8.0-RELEASE (01-12-2024)
+
 - Fixed general styling issues and typos.
 - Made cron file location configurable #30.
 - Refactored error messages to a general error function #32.
@@ -62,10 +73,12 @@ The [manual](https://codeberg.org/nozel/backupbot/src/branch/master/MANUAL.md) p
 - Added an option to automatically split file backups in to smaller parts #37.
 
 ### 1.7.1-RELEASE (21-05-2023)
+
 - Fixed layout inconsistency in log format.
 - Fixed legacy reference to /usr/bin in option_cron.
 
 ### 1.7.0-RELEASE (18-12-2022)
+
 - Added configurable automatic permissions of backups.
 - Log entries are now more informational.
 - Added a optional random delay for backups to spread out the potential load of multiple servers starting their backups at the same time.
@@ -73,13 +86,16 @@ The [manual](https://codeberg.org/nozel/backupbot/src/branch/master/MANUAL.md) p
 - Replaced echo with printf for consistency.
 
 ### 1.6.0-RELEASE (27-05-2022)
+
 - Added configurable automatic ownership of backups.
 - Added rudimentary logging of backupbot's actions.
 
 ### 1.5.1-RELEASE (20-01-2022)
+
 - Fixed a bug that would show an error when using --version or --help was used if the configuration file wasn't configured properly.
 
 ### 1.5.0-RELEASE (18-01-2022)
+
 - Refactored encryption feature to be configurable for every backup feature instead of it being a general setting.
 - Simplified the configuration of encryption by reducing the required configuration variable to one.
 - Improved default settings and removed unneeded checks on default values.
@@ -87,6 +103,7 @@ The [manual](https://codeberg.org/nozel/backupbot/src/branch/master/MANUAL.md) p
 - Expanded and improved the backupbot manual.
 
 ### 1.4.0-RELEASE (16-01-2022)
+
 - Added daily backup and weekly backup cycles.
 - Extended automatic cron generation to include daily and weekly backup cycles.
 - Extended retention to include daily and weekly backup cycles.
@@ -96,22 +113,28 @@ The [manual](https://codeberg.org/nozel/backupbot/src/branch/master/MANUAL.md) p
 - Made some variable names more consistent.
 
 ### 1.3.0-RELEASE (15-01-2022)
+
 - Added more compression alternatives: no compression, gzip, bzip2 and xz.
 
 ### 1.2.2-RELEASE (14-01-2022)
+
 - Fixed a bug in retention feature.
 - Switched from STABLE to RELEASE tag for releases.
 
 ### 1.2.1-STABLE (11-01-2022)
+
 - Refactored retention feature to keep working when user switches from encrypted to unencrypted backups and vice versa.
 
 ### 1.2.0-STABLE (16-10-2021)
+
 - Added support for automatic removal of old backups/retention.
 
 ### 1.1.0-STABLE (19-01-2021)
+
 - Added support for symmetrical encryption of backups.
 
 ### 1.0.0-STABLE (01-07-2020)
+
 - First stable release.
 - Added support for backing up files.
 - Added support for backing up mysql databases.
