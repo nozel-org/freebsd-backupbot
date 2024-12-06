@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ################################################################################
-# Version 1.8.0-RELEASE (01-12-2024)
+# Version 1.8.1-RELEASE (06-12-2024)
 ################################################################################
 
 #############################################################################
@@ -34,8 +34,8 @@
 ################################################################################
 
 # backupbot version
-BACKUPBOT_VERSION='1.8.0'
-BACKUPBOT_VERSION_DATE='01-12-2024'
+BACKUPBOT_VERSION='1.8.1'
+BACKUPBOT_VERSION_DATE='06-12-2024'
 
 # file locations
 BACKUPBOT_CONFIGURATION='/usr/local/etc/backupbot.conf'
@@ -552,41 +552,41 @@ feature_mysql() {
 
         # check configured backup compression and create variables for arguments and file extension
         if [ "${BACKUP_MYSQL_COMPRESSION}" = '0' ]; then
-            MYSQL_COMPRESSION_ARGUMENT=''
-            BACKUP_MYSQL_EXTENSION='tar'
+            MYSQL_COMPRESSION_ARGUMENT='cat'
+            BACKUP_MYSQL_EXTENSION='sql'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '1' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=gzip'
-            BACKUP_MYSQL_EXTENSION='tar.gz'
+            MYSQL_COMPRESSION_ARGUMENT='gzip'
+            BACKUP_MYSQL_EXTENSION='sql.gz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '2' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=bzip2'
-            BACKUP_MYSQL_EXTENSION='tar.bz2'
+            MYSQL_COMPRESSION_ARGUMENT='bzip2'
+            BACKUP_MYSQL_EXTENSION='sql.bz2'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '3' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=xz'
-            BACKUP_MYSQL_EXTENSION='tar.xz'
+            MYSQL_COMPRESSION_ARGUMENT='xz'
+            BACKUP_MYSQL_EXTENSION='sql.xz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '4' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lz4'
-            BACKUP_MYSQL_EXTENSION='tar.lz4'
+            MYSQL_COMPRESSION_ARGUMENT='lz4'
+            BACKUP_MYSQL_EXTENSION='sql.lz4'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '5' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=zstd'
-            BACKUP_MYSQL_EXTENSION='tar.zst'
+            MYSQL_COMPRESSION_ARGUMENT='zstd'
+            BACKUP_MYSQL_EXTENSION='sql.zst'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '6' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lrzip'
-            BACKUP_MYSQL_EXTENSION='tar.lrz'
+            MYSQL_COMPRESSION_ARGUMENT='lrzip'
+            BACKUP_MYSQL_EXTENSION='sql.lrz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '7' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lzip'
-            BACKUP_MYSQL_EXTENSION='tar.lz'
+            MYSQL_COMPRESSION_ARGUMENT='lzip'
+            BACKUP_MYSQL_EXTENSION='sql.lz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '8' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=lzop'
-            BACKUP_MYSQL_EXTENSION='tar.lzo'
+            MYSQL_COMPRESSION_ARGUMENT='lzop'
+            BACKUP_MYSQL_EXTENSION='sql.lzo'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '101' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=pigz'
-            BACKUP_MYSQL_EXTENSION='tar.gz'
+            MYSQL_COMPRESSION_ARGUMENT='pigz'
+            BACKUP_MYSQL_EXTENSION='sql.gz'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '102' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=pbzip2'
-            BACKUP_MYSQL_EXTENSION='tar.bz2'
+            MYSQL_COMPRESSION_ARGUMENT='pbzip2'
+            BACKUP_MYSQL_EXTENSION='sql.bz2'
         elif [ "${BACKUP_MYSQL_COMPRESSION}" = '107' ]; then
-            MYSQL_COMPRESSION_ARGUMENT='--use-compress-program=plzip'
-            BACKUP_MYSQL_EXTENSION='tar.lz'
+            MYSQL_COMPRESSION_ARGUMENT='plzip'
+            BACKUP_MYSQL_EXTENSION='sql.lz'
         fi
 
         # check whether backup encryption is enabled
